@@ -18,10 +18,13 @@ data/*.db-*
 .vscode
 *.tsbuildinfo
 next-env.d.ts
-# keep portable zip artifacts
+
+# desktop portable
 !dist-exe/
 !dist-exe/*.zip
 dist-exe/MAKINA-Gestao-Portable/
+
+# mobile
 mobile/node_modules
 mobile/dist
 mobile/android/.gradle

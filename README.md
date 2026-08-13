@@ -1,6 +1,6 @@
 # MAKINA — Software de Gestão Avançada
 
-Gestão de oficina / peças auto (Angola · padrão AGT).
+Gestão de oficina / peças auto (Angola · padrão AGT), **offline**.
 
 ## 📱 App Mobile (APK) — recomendado
 
@@ -8,13 +8,13 @@ Gestão de oficina / peças auto (Angola · padrão AGT).
 dist-apk/MAKINA-Gestao-1.0.0.apk
 ```
 
-- **Offline total** no telemóvel/tablet  
+- **100% offline** no telemóvel / tablet / foldable  
 - UI adaptável a qualquer ecrã  
 - Login: `MAKINA` / `admmakina`  
 
-Ver `mobile/README.md` e `dist-apk/LEIA-ME.txt`.
+Instruções: `dist-apk/LEIA-ME.txt` e `mobile/README.md`.
 
-### Pré-visualizar no browser
+### Pré-visualizar / desenvolver mobile
 
 ```bash
 cd mobile && npm install && npm run dev
@@ -33,7 +33,16 @@ cd mobile && npm run apk
 dist-exe/MAKINA-Gestao-1.0.0-Portable.zip
 ```
 
-Ver README anterior / `npm run package:portable` na raiz.
+1. Extraia o ZIP  
+2. Instale Node.js 22+ se necessário  
+3. Execute `Iniciar-MAKINA.bat`  
+
+Para `.exe` nativo (Electron) num PC Windows:
+
+```bash
+npm install
+npm run electron:build
+```
 
 ## Credenciais padrão
 
@@ -41,6 +50,14 @@ Ver README anterior / `npm run package:portable` na raiz.
 |-------|-------|
 | Utilizador | `MAKINA` |
 | Palavra-passe | `admmakina` |
+
+## Funcionalidades
+
+- Login Admin / Operador  
+- Dashboard (stock, receita, lucro)  
+- Estoque de peças com código `MAK-…`  
+- POS / faturação `MAK-INV-…`  
+- Operadores, calculadora, relatórios, configurações  
 
 ## Estrutura
 
@@ -54,4 +71,4 @@ Ver README anterior / `npm run package:portable` na raiz.
 
 ## Autor
 
-Makina Company / Raul Lourenço
+Makina Company / Raul Lourenço · AGT Angola
