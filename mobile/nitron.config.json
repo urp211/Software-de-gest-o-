@@ -1,0 +1,24 @@
+{
+  "name": "MAKINA",
+  "packageId": "com.makina.gestao",
+  "version": "1.0.0",
+  "versionCode": 1,
+  "entry": "dist/index.html",
+  "orientation": "auto",
+  "statusBar": true,
+  "permissions": [
+    "INTERNET",
+    "ACCESS_NETWORK_STATE"
+  ],
+  "icon": "./public/icons/icon-512.png",
+  "network": {
+    "cleartext": false
+  },
+  "webview": {
+    "backButton": "history",
+    "clearCacheOnStart": false
+  },
+  "splashScreen": {
+    "backgroundColor": "#0f172a"
+  }
+}

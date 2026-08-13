@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="pt-AO">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#0f172a" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="description" content="MAKINA — Gestão de oficina offline" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <link rel="apple-touch-icon" href="./icons/icon-192.png" />
+    <title>MAKINA</title>
+    <style>
+      html, body, #root {
+        margin: 0;
+        padding: 0;
+        min-height: 100%;
+        min-height: 100dvh;
+        background: #0f172a;
+        color: #e2e8f0;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, sans-serif;
+        -webkit-tap-highlight-color: transparent;
+        overscroll-behavior: none;
+      }
+      .boot {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100dvh;
+        gap: 1rem;
+      }
+      .boot-logo {
+        width: 72px;
+        height: 72px;
+        border-radius: 18px;
+        background: #2563eb;
+        display: grid;
+        place-items: center;
+        font-weight: 900;
+        font-size: 28px;
+        letter-spacing: 0.05em;
+        box-shadow: 0 10px 40px rgba(37, 99, 235, 0.45);
+      }
+      .boot-title {
+        font-weight: 800;
+        letter-spacing: 0.25em;
+        font-size: 1.25rem;
+      }
+      .boot-sub {
+        color: #64748b;
+        font-size: 0.875rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root">
+      <div class="boot">
+        <div class="boot-logo">M</div>
+        <div class="boot-title">MAKINA</div>
+        <div class="boot-sub">A carregar…</div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

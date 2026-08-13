@@ -1,0 +1,36 @@
+MAKINA — App Mobile Offline (Android APK)
+=========================================
+
+Ficheiros:
+  MAKINA-Gestao-1.0.0.apk   (instalável)
+  MAKINA.apk               (mesmo ficheiro, nome curto)
+
+Como instalar
+-------------
+1. Copie o APK para o telemóvel (Bluetooth, USB, Drive, WhatsApp…).
+2. Em Definições → Segurança, permita «Instalar apps desconhecidas»
+   para o gestor de ficheiros / Chrome.
+3. Abra o ficheiro MAKINA.apk e toque em Instalar.
+4. Abra a app MAKINA.
+
+Credenciais
+-----------
+  Utilizador : MAKINA
+  Password   : admmakina
+
+Funciona 100% offline
+---------------------
+- Dados guardados no próprio telemóvel (IndexedDB)
+- Sem necessidade de internet após instalar
+- Stock, vendas POS, operadores, relatórios, calculadora
+
+Dispositivos
+------------
+- Android 5.0+ (API 21+)
+- Telemóveis, tablets e foldables
+- UI adaptativa (navegação inferior no telemóvel, menu lateral em ecrãs largos)
+
+Package ID: com.makina.gestao
+Versão: 1.0.0
+
+Makina Company / Raul Lourenço · AGT Angola
