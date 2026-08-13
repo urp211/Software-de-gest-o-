@@ -1,0 +1,19 @@
+{
+  "name": "Truck Simulator",
+  "short_name": "Truck Simulator",
+  "description": "Simulador 3D de Caminhões Europeus Completo e Offline",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#000000",
+  "theme_color": "#0f172a",
+  "categories": ["games", "simulation"],
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

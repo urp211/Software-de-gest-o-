@@ -1,0 +1,22 @@
+{
+  "name": "truck-simulator",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Truck Simulator - Simulador 3D de Caminhões Europeus Offline",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "canvas-confetti": "^1.9.4",
+    "three": "^0.183.0"
+  },
+  "devDependencies": {
+    "@types/canvas-confetti": "^1.9.0",
+    "@types/three": "^0.183.1",
+    "typescript": "~5.9.3",
+    "vite": "^8.2.1"
+  }
+}
