@@ -1,0 +1,100 @@
+{
+  "name": "makina-gestao",
+  "version": "1.0.0",
+  "description": "MAKINA - Software de Gestão Avançada para Oficinas",
+  "author": "Makina Company / Raul Lourenço",
+  "private": true,
+  "main": "electron/main.js",
+  "scripts": {
+    "dev": "next dev -H 0.0.0.0 -p 3000",
+    "build": "next build",
+    "start": "next start -H 0.0.0.0 -p 3000",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "electron:dev": "concurrently -k \"next dev -H 127.0.0.1 -p 3000\" \"wait-on http://127.0.0.1:3000 && electron .\"",
+    "electron:build": "next build && electron-builder --win portable --x64",
+    "pack:win": "next build && electron-builder --win portable --x64",
+    "pack:linux": "next build && electron-builder --linux AppImage --x64",
+    "package:portable": "node scripts/build-portable.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "better-sqlite3": "file:vendor/better-sqlite3",
+    "date-fns": "^4.4.0",
+    "dotenv": "17.3.1",
+    "drizzle-orm": "0.45.2",
+    "jose": "^6.2.8",
+    "lucide-react": "^0.511.0",
+    "next": "15.5.2",
+    "react": "19.1.1",
+    "react-dom": "19.1.1",
+    "react-draggable": "^4.7.1",
+    "recharts": "^3.1.2"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "4.1.17",
+    "@types/node": "22.19.15",
+    "@types/react": "19.1.12",
+    "@types/react-dom": "19.1.9",
+    "concurrently": "^9.2.1",
+    "drizzle-kit": "0.31.10",
+    "electron": "^33.4.11",
+    "electron-builder": "^25.1.8",
+    "eslint": "9.39.4",
+    "eslint-config-next": "15.5.2",
+    "postcss": "8.5.8",
+    "tailwindcss": "4.1.17",
+    "typescript": "5.9.3",
+    "wait-on": "^8.0.5",
+    "@eslint/eslintrc": "^3.3.6"
+  },
+  "build": {
+    "appId": "com.makina.gestao",
+    "productName": "MAKINA Gestao",
+    "copyright": "Copyright © 2026 Makina Company",
+    "directories": {
+      "output": "dist-exe",
+      "buildResources": "build"
+    },
+    "files": [
+      "electron/**/*",
+      ".next/standalone/**/*",
+      ".next/static/**/*",
+      "public/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "data",
+        "to": "data",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "asar": true,
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "MAKINA-Gestao-${version}-Portable.${ext}",
+      "signAndEditExecutable": false
+    },
+    "portable": {
+      "artifactName": "MAKINA-Gestao-${version}-Portable.exe"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Office",
+      "artifactName": "MAKINA-Gestao-${version}.${ext}"
+    },
+    "npmRebuild": false
+  }
+}
