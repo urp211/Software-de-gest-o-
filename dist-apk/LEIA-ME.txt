@@ -1,36 +1,39 @@
-MAKINA — App Mobile Offline (Android APK)
-=========================================
+MAKINA Pro — App Mobile Offline (Android APK)
+=============================================
 
-Ficheiros:
-  MAKINA-Gestao-1.0.0.apk   (instalável)
-  MAKINA.apk               (mesmo ficheiro, nome curto)
+Ficheiro: MAKINA-Gestao-1.0.0.apk  |  MAKINA.apk
+Package: com.makina.gestao
+Android 5.0+ (API 21–34)
 
-Como instalar
--------------
-1. Copie o APK para o telemóvel (Bluetooth, USB, Drive, WhatsApp…).
-2. Em Definições → Segurança, permita «Instalar apps desconhecidas»
-   para o gestor de ficheiros / Chrome.
-3. Abra o ficheiro MAKINA.apk e toque em Instalar.
-4. Abra a app MAKINA.
+LOGIN
+-----
+Admin: MAKINA / admmakina
 
-Credenciais
------------
-  Utilizador : MAKINA
-  Password   : admmakina
+PERMISSÕES
+----------
+OPERADOR
+  - Vende no POS (não adiciona stock)
+  - Vê só as SUAS vendas e receita (sem lucros da empresa)
+  - 2ª via de fatura só com autorização do admin (salvo config)
 
-Funciona 100% offline
----------------------
-- Dados guardados no próprio telemóvel (IndexedDB)
-- Sem necessidade de internet após instalar
-- Stock, vendas POS, operadores, relatórios, calculadora
+ADMIN
+  - Stock com fotos, custos e alertas
+  - Lucros, despesas, contabilidade avançada
+  - Anular faturas, aprovar 2ª via, backup/restore
+  - Auditoria e operadores
 
-Dispositivos
-------------
-- Android 5.0+ (API 21+)
-- Telemóveis, tablets e foldables
-- UI adaptativa (navegação inferior no telemóvel, menu lateral em ecrãs largos)
+FATURAÇÃO
+---------
+  - Pré-visualização térmica 58/80mm
+  - Valor entregue + troco automático
+  - QR Code de validação em cada fatura
+  - Extrato A4 imprimível
+  - 2ª via controlada
 
-Package ID: com.makina.gestao
-Versão: 1.0.0
+OUTRAS FUNÇÕES PRO
+------------------
+Clientes, caixa/turno, despesas, backup JSON,
+contabilidade (margem, CMV, top produtos, por operador),
+movimentos de stock, auditoria.
 
-Makina Company / Raul Lourenço · AGT Angola
+Instalação: permitir «Fontes desconhecidas» e abrir o APK.

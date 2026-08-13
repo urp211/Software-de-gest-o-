@@ -12,6 +12,12 @@ import OperatorNewPage from "./pages/OperatorNewPage";
 import ReportsPage from "./pages/ReportsPage";
 import CalculatorPage from "./pages/CalculatorPage";
 import SettingsPage from "./pages/SettingsPage";
+import AccountingPage from "./pages/AccountingPage";
+import CashPage from "./pages/CashPage";
+import ExpensesPage from "./pages/ExpensesPage";
+import ClientsPage from "./pages/ClientsPage";
+import ApprovalsPage from "./pages/ApprovalsPage";
+import AuditPage from "./pages/AuditPage";
 
 function Private({ children }: { children: React.ReactNode }) {
   const { user, ready } = useAuth();
@@ -51,6 +57,12 @@ export default function App() {
           <Route path="operators" element={<OperatorsPage />} />
           <Route path="operators/new" element={<OperatorNewPage />} />
           <Route path="reports" element={<ReportsPage />} />
+          <Route path="accounting" element={<AccountingPage />} />
+          <Route path="cash" element={<CashPage />} />
+          <Route path="expenses" element={<ExpensesPage />} />
+          <Route path="clients" element={<ClientsPage />} />
+          <Route path="approvals" element={<ApprovalsPage />} />
+          <Route path="audit" element={<AuditPage />} />
           <Route path="calculator" element={<CalculatorPage />} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>

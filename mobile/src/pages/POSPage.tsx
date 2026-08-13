@@ -1,37 +1,83 @@
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Plus, Search, ShoppingCart, Trash2 } from "lucide-react";
-import { createSale, listParts, moneyShort } from "../lib/db";
+import {
+  createSale,
+  getSaleFull,
+  getSettings,
+  listClients,
+  listParts,
+  moneyShort,
+  type Client,
+  type PaymentMethod,
+  type Sale,
+  type SaleItem,
+  type Settings,
+  PAYMENT_LABELS,
+} from "../lib/db";
 import { useAuth } from "../hooks/useAuth";
+import { InvoicePreview } from "../components/InvoicePreview";
 
 type PartRow = Awaited<ReturnType<typeof listParts>>[number];
 type CartItem = PartRow & { quantity: number };
 
 export default function POSPage() {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const [parts, setParts] = useState<PartRow[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [settings, setSettings] = useState<Settings | null>(null);
   const [search, setSearch] = useState("");
   const [cart, setCart] = useState<CartItem[]>([]);
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
+  const [clientId, setClientId] = useState("");
+  const [clientName, setClientName] = useState("");
+  const [clientNif, setClientNif] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("CASH");
+  const [discount, setDiscount] = useState("");
+  const [amountPaid, setAmountPaid] = useState("");
+  const [notes, setNotes] = useState("");
+
+  const [preview, setPreview] = useState<{
+    sale: Sale;
+    items: SaleItem[];
+    settings: Settings;
+  } | null>(null);
+
   useEffect(() => {
     listParts().then(setParts);
+    listClients().then(setClients);
+    getSettings().then(setSettings);
   }, []);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return parts.filter((p) => p.stock > 0);
-    return parts.filter(
+    const base = parts.filter((p) => p.stock > 0);
+    if (!q) return base;
+    return base.filter(
       (p) =>
-        p.stock > 0 &&
-        (p.name.toLowerCase().includes(q) || p.trackingCode.toLowerCase().includes(q))
+        p.name.toLowerCase().includes(q) ||
+        p.trackingCode.toLowerCase().includes(q) ||
+        (p.barcode && p.barcode.toLowerCase().includes(q))
     );
   }, [parts, search]);
 
-  const total = cart.reduce((a, i) => a + i.price * i.quantity, 0);
+  const subtotal = cart.reduce((a, i) => a + i.price * i.quantity, 0);
+  const disc = Math.min(Number(discount) || 0, subtotal);
+  const taxRate = settings?.taxRate || 0;
+  const afterDisc = Math.max(0, subtotal - disc);
+  const tax = (afterDisc * taxRate) / 100;
+  const total = afterDisc + tax;
+  const paid = amountPaid === "" ? total : Number(amountPaid) || 0;
+  const change = Math.max(0, paid - total);
+
+  useEffect(() => {
+    // auto-fill amount paid with total when cart changes (cash convenience)
+    if (paymentMethod === "CASH") {
+      setAmountPaid(total ? String(Number(total.toFixed(2))) : "");
+    }
+  }, [total, paymentMethod]);
 
   const addToCart = (part: PartRow) => {
     setCart((prev) => {
@@ -52,7 +98,7 @@ export default function POSPage() {
         .map((i) => {
           if (i.id !== id) return i;
           const next = i.quantity + delta;
-          if (next < 1) return i;
+          if (next < 1) return { ...i, quantity: 0 };
           if (next > i.stock) return i;
           return { ...i, quantity: next };
         })
@@ -62,27 +108,57 @@ export default function POSPage() {
 
   const remove = (id: number) => setCart((prev) => prev.filter((i) => i.id !== id));
 
-  const checkout = async () => {
+  const onClientPick = (id: string) => {
+    setClientId(id);
+    const c = clients.find((x) => String(x.id) === id);
+    if (c) {
+      setClientName(c.name);
+      setClientNif(c.nif || "");
+    }
+  };
+
+  const checkout = async (e?: FormEvent) => {
+    e?.preventDefault();
     if (!user || cart.length === 0) return;
     setBusy(true);
     setError("");
     setMsg("");
     try {
-      const res = await createSale(
-        cart.map((i) => ({
+      const res = await createSale({
+        items: cart.map((i) => ({
           id: i.id!,
+          name: i.name,
+          trackingCode: i.trackingCode,
           price: i.price,
           cost: i.cost,
           quantity: i.quantity,
         })),
-        user.id
-      );
-      setMsg(`Venda concluída · ${res.invoiceNumber}`);
+        operatorId: user.id,
+        operatorName: user.name,
+        clientId: clientId ? parseInt(clientId, 10) : null,
+        clientName: clientName || null,
+        clientNif: clientNif || null,
+        paymentMethod,
+        amountPaid: paid,
+        discount: disc,
+        taxRate,
+        notes: notes || null,
+      });
+      setMsg(`Venda ${res.invoiceNumber} · Troco ${moneyShort(res.changeGiven)}`);
       setCart([]);
+      setDiscount("");
+      setNotes("");
       setParts(await listParts());
-      setTimeout(() => navigate("/sales"), 900);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Erro ao processar venda");
+      const full = await getSaleFull(res.saleId);
+      if (full) {
+        setPreview({
+          sale: full.sale,
+          items: full.items,
+          settings: full.settings,
+        });
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erro ao processar venda");
     } finally {
       setBusy(false);
     }
@@ -91,19 +167,22 @@ export default function POSPage() {
   return (
     <div>
       <h1 className="page-title">POS · Nova Venda</h1>
-      <p className="page-sub">Adicione produtos e emita a fatura localmente.</p>
+      <p className="page-sub">
+        Carrinho, desconto, IVA, valor entregue, troco automático e fatura com QR.
+      </p>
 
       {error && <div className="alert alert-error">{error}</div>}
       {msg && <div className="alert alert-ok">{msg}</div>}
 
       <div className="pos">
-        <div className="card" style={{ maxHeight: "60dvh", overflow: "auto" }}>
+        <div className="card" style={{ maxHeight: "52dvh", overflow: "auto" }}>
           <div className="search-wrap mb-1">
             <Search />
             <input
-              placeholder="Buscar por nome ou código…"
+              placeholder="Nome, código MAK ou código de barras…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              autoFocus
             />
           </div>
           <div className="list">
@@ -112,6 +191,18 @@ export default function POSPage() {
             ) : (
               filtered.map((p) => (
                 <div key={p.id} className="list-item">
+                  {p.imageUrl && (
+                    <img
+                      src={p.imageUrl}
+                      alt=""
+                      style={{
+                        width: 48,
+                        height: 48,
+                        borderRadius: 10,
+                        objectFit: "cover",
+                      }}
+                    />
+                  )}
                   <div className="meta">
                     <h3>{p.name}</h3>
                     <p>
@@ -124,7 +215,7 @@ export default function POSPage() {
                   <button
                     className="btn btn-primary btn-sm"
                     onClick={() => addToCart(p)}
-                    aria-label="Adicionar"
+                    type="button"
                   >
                     <Plus size={18} />
                   </button>
@@ -134,17 +225,17 @@ export default function POSPage() {
           </div>
         </div>
 
-        <div className="card pos-cart">
+        <form className="card pos-cart" onSubmit={checkout}>
           <div className="flex-between mb-1">
             <div style={{ display: "flex", gap: 8, alignItems: "center", fontWeight: 800 }}>
-              <ShoppingCart size={20} /> Fatura Atual
+              <ShoppingCart size={20} /> Fatura
             </div>
             <span className="badge badge-blue">{cart.length}</span>
           </div>
 
           {cart.length === 0 ? (
-            <div className="empty" style={{ padding: "1rem 0" }}>
-              Adicione produtos para iniciar a venda.
+            <div className="empty" style={{ padding: "0.75rem 0" }}>
+              Adicione produtos.
             </div>
           ) : (
             cart.map((item) => (
@@ -171,28 +262,128 @@ export default function POSPage() {
                 <div className="fw-bold" style={{ minWidth: 72, textAlign: "right" }}>
                   {moneyShort(item.price * item.quantity)}
                 </div>
-                <button type="button" onClick={() => remove(item.id!)} aria-label="Remover">
+                <button type="button" onClick={() => remove(item.id!)}>
                   <Trash2 size={16} color="#dc2626" />
                 </button>
               </div>
             ))
           )}
 
-          <div className="flex-between mt-2" style={{ paddingTop: 12, borderTop: "1px solid #e2e8f0" }}>
-            <span className="text-muted">Total a pagar</span>
-            <span style={{ fontSize: "1.35rem", fontWeight: 900, color: "#059669" }}>
-              {moneyShort(total)}
-            </span>
+          <div className="field mt-1">
+            <label>Cliente (opcional)</label>
+            <select value={clientId} onChange={(e) => onClientPick(e.target.value)}>
+              <option value="">Consumidor final</option>
+              {clients.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
           </div>
+          <div className="row-2">
+            <div className="field">
+              <label>Nome cliente</label>
+              <input value={clientName} onChange={(e) => setClientName(e.target.value)} />
+            </div>
+            <div className="field">
+              <label>NIF cliente</label>
+              <input value={clientNif} onChange={(e) => setClientNif(e.target.value)} />
+            </div>
+          </div>
+
+          <div className="row-2">
+            <div className="field">
+              <label>Pagamento</label>
+              <select
+                value={paymentMethod}
+                onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
+              >
+                {Object.entries(PAYMENT_LABELS).map(([k, v]) => (
+                  <option key={k} value={k}>
+                    {v}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label>Desconto (Kz)</label>
+              <input
+                type="number"
+                inputMode="decimal"
+                min={0}
+                value={discount}
+                onChange={(e) => setDiscount(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="row-2">
+            <div className="field">
+              <label>Valor entregue (Kz)</label>
+              <input
+                type="number"
+                inputMode="decimal"
+                required
+                min={0}
+                step="0.01"
+                value={amountPaid}
+                onChange={(e) => setAmountPaid(e.target.value)}
+              />
+            </div>
+            <div className="field">
+              <label>Troco (auto)</label>
+              <input readOnly value={moneyShort(change)} style={{ fontWeight: 800, color: "#059669" }} />
+            </div>
+          </div>
+
+          <div className="field">
+            <label>Notas</label>
+            <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Opcional" />
+          </div>
+
+          <div style={{ background: "#f8fafc", borderRadius: 12, padding: "0.75rem" }}>
+            <div className="flex-between">
+              <span className="text-muted">Subtotal</span>
+              <span>{moneyShort(subtotal)}</span>
+            </div>
+            {disc > 0 && (
+              <div className="flex-between">
+                <span className="text-muted">Desconto</span>
+                <span>-{moneyShort(disc)}</span>
+              </div>
+            )}
+            {tax > 0 && (
+              <div className="flex-between">
+                <span className="text-muted">IVA ({taxRate}%)</span>
+                <span>{moneyShort(tax)}</span>
+              </div>
+            )}
+            <div className="flex-between mt-1" style={{ fontSize: "1.25rem", fontWeight: 900 }}>
+              <span>TOTAL</span>
+              <span style={{ color: "#059669" }}>{moneyShort(total)}</span>
+            </div>
+          </div>
+
           <button
             className="btn btn-success btn-block mt-1"
             disabled={cart.length === 0 || busy}
-            onClick={checkout}
+            type="submit"
           >
-            {busy ? "A processar…" : "Emitir Fatura / Fechar Venda"}
+            {busy ? "A processar…" : "Fechar venda + Pré-visualizar fatura"}
           </button>
-        </div>
+        </form>
       </div>
+
+      {preview && (
+        <InvoicePreview
+          open={!!preview}
+          onClose={() => setPreview(null)}
+          sale={preview.sale}
+          items={preview.items}
+          settings={preview.settings}
+          copyLabel="ORIGINAL"
+        />
+      )}
     </div>
   );
 }

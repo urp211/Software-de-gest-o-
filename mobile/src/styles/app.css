@@ -849,6 +849,37 @@ img {
 .price { color: var(--primary); font-weight: 800; }
 .profit { color: var(--purple); font-weight: 700; }
 
+/* Invoice / thermal helpers on-screen */
+.dash {
+  border-top: 1px dashed #94a3b8;
+  margin: 8px 0;
+}
+.tiny { font-size: 0.75rem; }
+.text-center { text-align: center; }
+
+/* Checkbox row */
+input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--primary);
+}
+
+/* Better select on mobile */
+select {
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, #64748b 50%),
+    linear-gradient(135deg, #64748b 50%, transparent 50%);
+  background-position: calc(100% - 18px) calc(50% - 3px), calc(100% - 12px) calc(50% - 3px);
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+}
+
+/* Print helpers */
+@media print {
+  body * { visibility: hidden; }
+  .print-root, .print-root * { visibility: visible; }
+}
+
 /* Landscape phones */
 @media (max-height: 480px) and (orientation: landscape) {
   .login-screen {

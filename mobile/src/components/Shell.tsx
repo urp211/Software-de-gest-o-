@@ -12,6 +12,13 @@ import {
   LogOut,
   Wrench,
   WifiOff,
+  TrendingUp,
+  Wallet,
+  Receipt,
+  UserCircle2,
+  ShieldCheck,
+  ScrollText,
+  Landmark,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 
@@ -19,21 +26,52 @@ const primary = [
   { to: "/", label: "Início", icon: LayoutDashboard, end: true },
   { to: "/sales", label: "Vendas", icon: ShoppingCart },
   { to: "/inventory", label: "Stock", icon: Package },
-  { to: "/calculator", label: "Calc", icon: Calculator },
-];
-
-const moreItems = [
-  { to: "/sales/new", label: "Nova Venda (POS)", icon: ShoppingCart },
-  { to: "/inventory/new", label: "Nova Peça", icon: Package },
-  { to: "/operators", label: "Operadores", icon: Users },
-  { to: "/reports", label: "Relatórios", icon: FileText },
-  { to: "/settings", label: "Configurações", icon: Settings },
+  { to: "/accounting", label: "Conta", icon: TrendingUp },
 ];
 
 export function Shell() {
   const { user, logout } = useAuth();
+  const isAdmin = user?.role === "ADMIN";
   const [moreOpen, setMoreOpen] = useState(false);
   const navigate = useNavigate();
+
+  const moreItems = [
+    { to: "/sales/new", label: "Nova Venda (POS)", icon: ShoppingCart },
+    ...(isAdmin
+      ? [{ to: "/inventory/new", label: "Nova Peça", icon: Package }]
+      : []),
+    { to: "/clients", label: "Clientes", icon: UserCircle2 },
+    { to: "/cash", label: "Caixa / Turno", icon: Wallet },
+    ...(isAdmin
+      ? [
+          { to: "/expenses", label: "Despesas", icon: Receipt },
+          { to: "/operators", label: "Operadores", icon: Users },
+          { to: "/approvals", label: "Autorizações 2ª via", icon: ShieldCheck },
+          { to: "/audit", label: "Auditoria", icon: ScrollText },
+          { to: "/accounting", label: "Contabilidade avançada", icon: Landmark },
+        ]
+      : []),
+    { to: "/reports", label: "Relatórios / Extrato A4", icon: FileText },
+    { to: "/calculator", label: "Calculadora", icon: Calculator },
+    { to: "/settings", label: "Configurações & Backup", icon: Settings },
+  ];
+
+  const sideItems = [
+    ...primary,
+    { to: "/clients", label: "Clientes", icon: UserCircle2 },
+    { to: "/cash", label: "Caixa", icon: Wallet },
+    ...(isAdmin
+      ? [
+          { to: "/expenses", label: "Despesas", icon: Receipt },
+          { to: "/operators", label: "Operadores", icon: Users },
+          { to: "/approvals", label: "Autorizações", icon: ShieldCheck },
+          { to: "/audit", label: "Auditoria", icon: ScrollText },
+        ]
+      : []),
+    { to: "/reports", label: "Relatórios", icon: FileText },
+    { to: "/calculator", label: "Calculadora", icon: Calculator },
+    { to: "/settings", label: "Configurações", icon: Settings },
+  ];
 
   const handleLogout = () => {
     logout();
@@ -42,7 +80,6 @@ export function Shell() {
 
   return (
     <div className="app-shell">
-      {/* Side nav — tablets/desktop */}
       <nav className="side-nav" aria-label="Menu lateral">
         <div className="side-brand">
           <div className="mark">
@@ -50,36 +87,37 @@ export function Shell() {
           </div>
           <div>
             <div style={{ fontWeight: 800, letterSpacing: "0.18em" }}>MAKINA</div>
-            <div style={{ fontSize: "0.75rem", color: "#94a3b8" }}>{user?.name}</div>
+            <div style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
+              {user?.name} · {isAdmin ? "Admin" : "Operador"}
+            </div>
           </div>
         </div>
-        {[...primary, ...moreItems.filter((m) => m.to !== "/sales/new" && m.to !== "/inventory/new")].map(
-          (item) => {
-            const Icon = item.icon;
-            return (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={"end" in item ? item.end : false}
-                className={({ isActive }) => (isActive ? "active" : undefined)}
-              >
-                <Icon size={18} />
-                <span>{item.label}</span>
-              </NavLink>
-            );
-          }
-        )}
+        {sideItems.map((item) => {
+          const Icon = item.icon;
+          return (
+            <NavLink
+              key={item.to + item.label}
+              to={item.to}
+              end={"end" in item ? Boolean((item as { end?: boolean }).end) : false}
+              className={({ isActive }) => (isActive ? "active" : undefined)}
+            >
+              <Icon size={18} />
+              <span>{item.label}</span>
+            </NavLink>
+          );
+        })}
         <button
           className="sheet-item"
           style={{ color: "#fca5a5", marginTop: "0.5rem" }}
           onClick={handleLogout}
+          type="button"
         >
           <LogOut size={18} />
           <span>Sair</span>
         </button>
         <div className="side-footer">
           <div className="offline-pill" style={{ marginBottom: "0.5rem" }}>
-            <WifiOff size={12} /> Offline
+            <WifiOff size={12} /> Offline Pro
           </div>
           Makina Company · AGT Angola
         </div>
@@ -93,7 +131,9 @@ export function Shell() {
             </div>
             <div>
               <h1>MAKINA</h1>
-              <small>{user?.name} · {user?.role === "ADMIN" ? "Admin" : "Operador"}</small>
+              <small>
+                {user?.name} · {isAdmin ? "Admin" : "Operador"}
+              </small>
             </div>
           </div>
           <span className="offline-pill">
@@ -106,7 +146,6 @@ export function Shell() {
         </main>
       </div>
 
-      {/* Bottom nav — phones */}
       <nav className="bottom-nav" aria-label="Navegação principal">
         {primary.map((item) => {
           const Icon = item.icon;
@@ -147,15 +186,18 @@ export function Shell() {
           <div className="sheet-backdrop" onClick={() => setMoreOpen(false)} />
           <div className="sheet" role="dialog" aria-label="Mais opções">
             <div className="sheet-handle" />
-            <div style={{ fontWeight: 800, marginBottom: "0.5rem", padding: "0 0.5rem" }}>
-              Menu
+            <div
+              style={{ fontWeight: 800, marginBottom: "0.5rem", padding: "0 0.5rem" }}
+            >
+              Menu profissional
             </div>
             {moreItems.map((item) => {
               const Icon = item.icon;
               return (
                 <button
-                  key={item.to}
+                  key={item.to + item.label}
                   className="sheet-item"
+                  type="button"
                   onClick={() => {
                     setMoreOpen(false);
                     navigate(item.to);
@@ -169,6 +211,7 @@ export function Shell() {
             <button
               className="sheet-item"
               style={{ color: "#dc2626" }}
+              type="button"
               onClick={() => {
                 setMoreOpen(false);
                 handleLogout();
