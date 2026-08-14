@@ -2,9 +2,10 @@ import { FormEvent, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { addUser, type Role } from "../lib/db";
 import { useAuth } from "../hooks/useAuth";
+import { ROLE_LABELS, ROLE_OPTIONS } from "../lib/roles";
 
 export default function OperatorNewPage() {
-  const { user } = useAuth();
+  const { user, can } = useAuth();
   const navigate = useNavigate();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -12,14 +13,14 @@ export default function OperatorNewPage() {
     name: "",
     username: "",
     password: "",
-    role: "OPERATOR" as Role,
+    role: "SELLER" as Role,
     autoLogoutTime: "",
   });
 
-  if (user?.role !== "ADMIN") {
+  if (!can("users.manage")) {
     return (
       <div className="card alert alert-error">
-        Apenas administradores podem criar operadores.
+        Sem permissão para criar utilizadores.
       </div>
     );
   }
@@ -81,16 +82,19 @@ export default function OperatorNewPage() {
             />
           </div>
           <div className="row-2">
-            <div className="field">
-              <label>Função</label>
-              <select
-                value={form.role}
-                onChange={(e) => setForm({ ...form, role: e.target.value as Role })}
-              >
-                <option value="OPERATOR">Operador</option>
-                <option value="ADMIN">Administrador</option>
-              </select>
-            </div>
+<div className="field">
+                <label>Função / perfil</label>
+                <select
+                  value={form.role}
+                  onChange={(e) => setForm({ ...form, role: e.target.value as Role })}
+                >
+                  {ROLE_OPTIONS.map((r) => (
+                    <option key={r} value={r}>
+                      {ROLE_LABELS[r]}
+                    </option>
+                  ))}
+                </select>
+              </div>
             <div className="field">
               <label>Pausa automática (min)</label>
               <input

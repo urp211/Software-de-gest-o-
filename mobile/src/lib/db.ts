@@ -1,7 +1,16 @@
 import Dexie, { type Table } from "dexie";
 import bcrypt from "bcryptjs";
 
-export type Role = "ADMIN" | "OPERATOR";
+export type Role =
+  | "SUPER_ADMIN"
+  | "ADMIN"
+  | "MANAGER"
+  | "FINANCE"
+  | "SELLER"
+  | "WAREHOUSE"
+  | "TECHNICIAN"
+  | "AUDITOR"
+  | "OPERATOR";
 export type PartCondition = "NEW" | "USED";
 export type SaleStatus = "COMPLETED" | "CANCELLED";
 export type PaymentMethod = "CASH" | "TRANSFER" | "CARD" | "MULTICAIXA" | "MIXED";
@@ -25,7 +34,10 @@ export interface User {
   autoLogoutTime?: number | null;
   active?: boolean;
   phone?: string | null;
+  department?: string | null;
+  extraPermissions?: string[] | null;
   createdAt: number;
+  deletedAt?: number | null;
 }
 
 export interface Settings {
@@ -201,9 +213,23 @@ class MakinaDB extends Dexie {
   stockMovements!: Table<StockMovement, number>;
   auditLogs!: Table<AuditLog, number>;
   secondCopyRequests!: Table<SecondCopyRequest, number>;
+  // Enterprise v2
+  suppliers!: Table<Record<string, unknown>, number>;
+  purchases!: Table<Record<string, unknown>, number>;
+  purchaseItems!: Table<Record<string, unknown>, number>;
+  accountsPayable!: Table<Record<string, unknown>, number>;
+  accountsReceivable!: Table<Record<string, unknown>, number>;
+  quotes!: Table<Record<string, unknown>, number>;
+  quoteItems!: Table<Record<string, unknown>, number>;
+  serviceOrders!: Table<Record<string, unknown>, number>;
+  notifications!: Table<Record<string, unknown>, number>;
+  docSequences!: Table<Record<string, unknown>, number>;
+  categories!: Table<Record<string, unknown>, number>;
+  brands!: Table<Record<string, unknown>, number>;
+  approvals!: Table<Record<string, unknown>, number>;
 
   constructor() {
-    super("makina_offline_v3");
+    super("makina_offline_v4");
     this.version(1).stores({
       users: "++id, &username, role, createdAt, active",
       settings: "++id",
@@ -218,6 +244,19 @@ class MakinaDB extends Dexie {
       stockMovements: "++id, partId, type, createdAt, operatorId",
       auditLogs: "++id, userId, action, createdAt",
       secondCopyRequests: "++id, saleId, status, requestedBy, createdAt",
+      suppliers: "++id, code, name, nif, createdAt, deletedAt",
+      purchases: "++id, number, supplierId, status, createdAt",
+      purchaseItems: "++id, purchaseId, partId",
+      accountsPayable: "++id, number, supplierId, status, dueDate, createdAt",
+      accountsReceivable: "++id, number, clientId, status, dueDate, createdAt",
+      quotes: "++id, number, clientId, status, createdAt",
+      quoteItems: "++id, quoteId, partId",
+      serviceOrders: "++id, number, clientId, status, technicianId, createdAt",
+      notifications: "++id, userId, read, level, createdAt",
+      docSequences: "++id, [kind+year], kind, year",
+      categories: "++id, name, type",
+      brands: "++id, name",
+      approvals: "++id, status, type, requestedBy, createdAt",
     });
   }
 }
@@ -230,7 +269,7 @@ function code(prefix: string) {
   return `${prefix}-${dateStr}-${randomStr}`;
 }
 
-function n(v: unknown, fallback = 0) {
+export function n(v: unknown, fallback = 0) {
   const x = Number(v);
   return Number.isFinite(x) ? x : fallback;
 }
@@ -262,7 +301,7 @@ export async function seedIfNeeded() {
     await db.users.add({
       username: "MAKINA",
       password: await bcrypt.hash(bootstrap, 10),
-      role: "ADMIN",
+      role: "SUPER_ADMIN",
       name: "Administrador Geral",
       active: true,
       createdAt: Date.now(),
@@ -1148,6 +1187,19 @@ export async function exportBackup() {
     "stockMovements",
     "auditLogs",
     "secondCopyRequests",
+    "suppliers",
+    "purchases",
+    "purchaseItems",
+    "accountsPayable",
+    "accountsReceivable",
+    "quotes",
+    "quoteItems",
+    "serviceOrders",
+    "notifications",
+    "docSequences",
+    "categories",
+    "brands",
+    "approvals",
   ] as const;
   const data: Record<string, unknown[]> = {};
   for (const t of tables) {

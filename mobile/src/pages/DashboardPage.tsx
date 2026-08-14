@@ -7,46 +7,29 @@ import {
   AlertTriangle,
   Wallet,
   TrendingUp,
+  Users,
+  Truck,
+  Bell,
+  Banknote,
 } from "lucide-react";
-import {
-  getDashboardStats,
-  money,
-  moneyShort,
-  type Announcement,
-  type Part,
-} from "../lib/db";
-import { formatDate } from "../lib/format";
+import { money, moneyShort } from "../lib/db";
+import { getEnterpriseKpis } from "../lib/enterprise";
 import { useAuth } from "../hooks/useAuth";
 import { getNetworkStatus, notifyLocal } from "../lib/device";
+import { formatDate } from "../lib/format";
 
 export default function DashboardPage() {
-  const { user } = useAuth();
-  const isAdmin = user?.role === "ADMIN";
-  const [stats, setStats] = useState({
-    totalParts: 0,
-    totalUnits: 0,
-    stockValue: 0,
-    revenue: 0,
-    profit: 0,
-    netProfit: 0,
-    expenses: 0,
-    salesCount: 0,
-    todaySales: 0,
-    todayRevenue: 0,
-    todayProfit: 0,
-    lowStock: [] as Part[],
-    announcements: [] as Announcement[],
-    isAdmin: false,
-  });
+  const { user, can } = useAuth();
+  const [k, setK] = useState<Awaited<ReturnType<typeof getEnterpriseKpis>> | null>(null);
   const [loading, setLoading] = useState(true);
   const [net, setNet] = useState("…");
 
   useEffect(() => {
     if (!user) return;
-    getDashboardStats({ role: user.role, userId: user.id })
+    getEnterpriseKpis(user.role, user.id)
       .then(async (s) => {
-        setStats(s);
-        if (isAdmin && s.lowStock.length > 0) {
+        setK(s);
+        if (s.lowStock.length > 0 && can("inventory.view")) {
           const key = `lowstock_notified_${new Date().toDateString()}`;
           if (!sessionStorage.getItem(key)) {
             await notifyLocal(
@@ -61,85 +44,148 @@ export default function DashboardPage() {
     getNetworkStatus().then((n) =>
       setNet(n.connected ? `Rede: ${n.connectionType}` : "Modo offline")
     );
-  }, [user, isAdmin]);
+  }, [user, can]);
+
+  if (!user) return null;
 
   return (
     <div>
-      <h1 className="page-title">Visão Geral</h1>
+      <h1 className="page-title">Dashboard empresarial</h1>
       <p className="page-sub">
-        Olá, {user?.name?.split(" ")[0] || "utilizador"}.
-        {isAdmin
-          ? " Painel completo de administração."
-          : " A ver apenas as suas operações (sem lucros globais)."}{" "}
-        <span className="text-muted">· {net}</span>
+        Olá, {user.name?.split(" ")[0]}. Indicadores em tempo real · {net}
       </p>
 
       <div className="fab-row no-print mb-2">
-        <Link to="/sales/new" className="btn btn-success btn-sm">
-          <ShoppingCart size={16} /> Nova Venda
-        </Link>
-        {isAdmin && (
-          <Link to="/inventory/new" className="btn btn-primary btn-sm">
-            <PackagePlus size={16} /> Nova Peça
+        {can("sales.create") && (
+          <Link to="/sales/new" className="btn btn-success btn-sm">
+            <ShoppingCart size={16} /> Nova Venda
           </Link>
         )}
-        <Link to="/accounting" className="btn btn-ghost btn-sm">
-          <TrendingUp size={16} /> {isAdmin ? "Contabilidade" : "Meu desempenho"}
-        </Link>
-        <Link to="/reports" className="btn btn-ghost btn-sm">
-          <FileText size={16} /> Relatórios
+        {can("inventory.create") && (
+          <Link to="/inventory/new" className="btn btn-primary btn-sm">
+            <PackagePlus size={16} /> Produto
+          </Link>
+        )}
+        {can("reports.view") && (
+          <Link to="/accounting" className="btn btn-ghost btn-sm">
+            <TrendingUp size={16} /> Indicadores
+          </Link>
+        )}
+        <Link to="/notifications" className="btn btn-ghost btn-sm">
+          <Bell size={16} /> Alertas
+          {k && k.unreadNotifications > 0 ? ` (${k.unreadNotifications})` : ""}
         </Link>
       </div>
 
-      {loading ? (
-        <div className="empty">A carregar…</div>
+      {loading || !k ? (
+        <div className="empty">A carregar indicadores…</div>
       ) : (
         <>
           <div className="stats-grid">
-            <div className="stat">
-              <label>{isAdmin ? "Peças no catálogo" : "Vendas hoje"}</label>
-              <strong>{isAdmin ? stats.totalParts : stats.todaySales}</strong>
-              <div className="text-muted" style={{ fontSize: "0.8rem", marginTop: 4 }}>
-                {isAdmin
-                  ? `${stats.totalUnits} unidades em stock`
-                  : `Hoje: ${moneyShort(stats.todayRevenue)}`}
-              </div>
-            </div>
             <div className="stat emerald">
-              <label>{isAdmin ? "Receita total" : "A minha receita"}</label>
-              <strong>{money(stats.revenue)}</strong>
+              <label>Faturação hoje</label>
+              <strong>{money(k.dayRevenue)}</strong>
               <div className="text-muted" style={{ fontSize: "0.8rem", marginTop: 4 }}>
-                {stats.salesCount} vendas
+                {k.daySales} vendas
               </div>
             </div>
-            {isAdmin ? (
+            <div className="stat">
+              <label>Faturação do mês</label>
+              <strong>{money(k.monthRevenue)}</strong>
+              <div className="text-muted" style={{ fontSize: "0.8rem", marginTop: 4 }}>
+                {k.monthSales} vendas
+              </div>
+            </div>
+            {k.seeProfit ? (
               <div className="stat purple">
-                <label>Lucro líquido</label>
-                <strong>{money(stats.netProfit)}</strong>
+                <label>Lucro líquido est.</label>
+                <strong>{money(k.netProfit)}</strong>
                 <div className="text-muted" style={{ fontSize: "0.8rem", marginTop: 4 }}>
-                  Bruto {moneyShort(stats.profit)} − Desp. {moneyShort(stats.expenses)}
+                  Desp. {moneyShort(k.expenses)}
                 </div>
               </div>
             ) : (
               <div className="stat amber">
-                <label>Receita de hoje</label>
-                <strong>{money(stats.todayRevenue)}</strong>
+                <label>As minhas vendas</label>
+                <strong>{k.salesCount}</strong>
               </div>
             )}
           </div>
 
-          {isAdmin && stats.lowStock.length > 0 && (
+          <div className="stats-grid mt-2">
+            <div className="stat">
+              <label>Stock (SKUs / un.)</label>
+              <strong style={{ fontSize: "1.25rem" }}>
+                {k.stockSkus} / {k.stockUnits}
+              </strong>
+            </div>
+            <div className="stat">
+              <label>
+                <Users size={14} /> Clientes
+              </label>
+              <strong style={{ fontSize: "1.25rem" }}>{k.clients}</strong>
+            </div>
+            <div className="stat">
+              <label>
+                <Truck size={14} /> Fornecedores
+              </label>
+              <strong style={{ fontSize: "1.25rem" }}>{k.suppliers}</strong>
+            </div>
+            <div className="stat">
+              <label>
+                <Wallet size={14} /> Caixas abertas
+              </label>
+              <strong style={{ fontSize: "1.25rem" }}>{k.openCashSessions}</strong>
+            </div>
+          </div>
+
+          {(k.overduePayables > 0 ||
+            k.overdueReceivables > 0 ||
+            k.dueSoon > 0 ||
+            k.lowStock.length > 0) && (
             <div className="card mt-2" style={{ borderColor: "#fcd34d", background: "#fffbeb" }}>
+              <strong style={{ display: "flex", gap: 8, alignItems: "center", color: "#b45309" }}>
+                <AlertTriangle size={18} /> Alertas
+              </strong>
+              <div className="stack mt-1">
+                {k.lowStock.length > 0 && (
+                  <Link to="/inventory" className="flex-between">
+                    <span>Stock baixo</span>
+                    <span className="badge badge-orange">{k.lowStock.length}</span>
+                  </Link>
+                )}
+                {k.overduePayables > 0 && (
+                  <Link to="/payables" className="flex-between">
+                    <span>Contas a pagar vencidas</span>
+                    <span className="badge badge-red">{k.overduePayables}</span>
+                  </Link>
+                )}
+                {k.overdueReceivables > 0 && (
+                  <Link to="/receivables" className="flex-between">
+                    <span>Contas a receber vencidas</span>
+                    <span className="badge badge-red">{k.overdueReceivables}</span>
+                  </Link>
+                )}
+                {k.dueSoon > 0 && (
+                  <div className="flex-between">
+                    <span>Vencimentos (7 dias)</span>
+                    <span className="badge badge-blue">{k.dueSoon}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {k.lowStock.length > 0 && (
+            <div className="card mt-2">
               <div className="flex-between mb-1">
-                <strong style={{ display: "flex", gap: 8, alignItems: "center", color: "#b45309" }}>
-                  <AlertTriangle size={18} /> Stock baixo ({stats.lowStock.length})
-                </strong>
+                <strong>Produtos em stock baixo</strong>
                 <Link to="/inventory" className="btn btn-ghost btn-sm">
                   Ver
                 </Link>
               </div>
               <div className="list">
-                {stats.lowStock.slice(0, 5).map((p) => (
+                {k.lowStock.slice(0, 5).map((p) => (
                   <div key={p.id} className="list-item" style={{ padding: "0.55rem" }}>
                     <div className="meta">
                       <h3 style={{ fontSize: "0.9rem" }}>{p.name}</h3>
@@ -152,42 +198,27 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {isAdmin && (
-            <div className="stats-grid mt-2">
-              <div className="stat">
-                <label>Valor stock (venda)</label>
-                <strong style={{ fontSize: "1.2rem" }}>{moneyShort(stats.stockValue)}</strong>
-              </div>
-              <div className="stat">
-                <label>
-                  <Wallet size={14} style={{ verticalAlign: "middle" }} /> Despesas
-                </label>
-                <strong style={{ fontSize: "1.2rem" }}>{moneyShort(stats.expenses)}</strong>
-              </div>
+          <div className="stats-grid mt-2">
+            <Link to="/payables" className="stat">
+              <label>
+                <Banknote size={14} /> A pagar (vencidas)
+              </label>
+              <strong style={{ fontSize: "1.2rem" }}>{k.overduePayables}</strong>
+            </Link>
+            <Link to="/receivables" className="stat">
+              <label>A receber (vencidas)</label>
+              <strong style={{ fontSize: "1.2rem" }}>{k.overdueReceivables}</strong>
+            </Link>
+            <div className="stat">
+              <label>Utilizadores ativos</label>
+              <strong style={{ fontSize: "1.2rem" }}>{k.activeUsers}</strong>
             </div>
-          )}
-
-          <div className="card mt-2" style={{ background: "#fffbeb", borderColor: "#fde68a" }}>
-            <h3 style={{ margin: "0 0 0.75rem", color: "#92400e" }}>Comunicados</h3>
-            {stats.announcements.length === 0 ? (
-              <p className="text-muted" style={{ margin: 0 }}>
-                Nenhum comunicado.
-              </p>
-            ) : (
-              <div className="stack">
-                {stats.announcements.map((a) => (
-                  <div
-                    key={a.id}
-                    style={{ background: "white", borderRadius: 12, padding: "0.75rem" }}
-                  >
-                    <div>{a.message}</div>
-                    <div className="text-muted" style={{ fontSize: "0.75rem", marginTop: 6 }}>
-                      {formatDate(a.createdAt)}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+            <Link to="/reports" className="stat">
+              <label>
+                <FileText size={14} /> Relatórios
+              </label>
+              <strong style={{ fontSize: "1rem" }}>Abrir</strong>
+            </Link>
           </div>
         </>
       )}

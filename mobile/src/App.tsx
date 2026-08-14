@@ -21,11 +21,18 @@ import ExpensesPage from "./pages/ExpensesPage";
 import ClientsPage from "./pages/ClientsPage";
 import ApprovalsPage from "./pages/ApprovalsPage";
 import AuditPage from "./pages/AuditPage";
+import SuppliersPage from "./pages/SuppliersPage";
+import PurchasesPage from "./pages/PurchasesPage";
+import PayablesPage from "./pages/PayablesPage";
+import ReceivablesPage from "./pages/ReceivablesPage";
+import QuotesPage from "./pages/QuotesPage";
+import ServicesPage from "./pages/ServicesPage";
+import NotificationsPage from "./pages/NotificationsPage";
+import LegalPage from "./pages/LegalPage";
 
 function Private({ children }: { children: React.ReactNode }) {
   const { user, ready } = useAuth();
   const [permsDone, setPermsDone] = useState(getSavedPermissionPrompted());
-
   const finishPerms = useCallback(() => setPermsDone(true), []);
 
   if (!ready) {
@@ -34,17 +41,13 @@ function Private({ children }: { children: React.ReactNode }) {
         <div className="login-hero">
           <div className="mark">M</div>
           <h1>MAKINA</h1>
-          <p>A preparar o sistema offline…</p>
+          <p>A preparar o sistema empresarial…</p>
         </div>
       </div>
     );
   }
   if (!user) return <Navigate to="/login" replace />;
-
-  if (!permsDone) {
-    return <PermissionsGate onDone={finishPerms} />;
-  }
-
+  if (!permsDone) return <PermissionsGate onDone={finishPerms} />;
   return <>{children}</>;
 }
 
@@ -66,17 +69,25 @@ export default function App() {
           <Route path="inventory/new" element={<InventoryNewPage />} />
           <Route path="sales" element={<SalesPage />} />
           <Route path="sales/new" element={<POSPage />} />
+          <Route path="purchases" element={<PurchasesPage />} />
+          <Route path="quotes" element={<QuotesPage />} />
+          <Route path="services" element={<ServicesPage />} />
           <Route path="operators" element={<OperatorsPage />} />
           <Route path="operators/new" element={<OperatorNewPage />} />
           <Route path="reports" element={<ReportsPage />} />
           <Route path="accounting" element={<AccountingPage />} />
           <Route path="cash" element={<CashPage />} />
           <Route path="expenses" element={<ExpensesPage />} />
+          <Route path="payables" element={<PayablesPage />} />
+          <Route path="receivables" element={<ReceivablesPage />} />
           <Route path="clients" element={<ClientsPage />} />
+          <Route path="suppliers" element={<SuppliersPage />} />
           <Route path="approvals" element={<ApprovalsPage />} />
           <Route path="audit" element={<AuditPage />} />
+          <Route path="notifications" element={<NotificationsPage />} />
           <Route path="calculator" element={<CalculatorPage />} />
           <Route path="settings" element={<SettingsPage />} />
+          <Route path="legal" element={<LegalPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

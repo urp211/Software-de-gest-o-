@@ -1,23 +1,22 @@
-MAKINA — Gestão Empresarial Offline (Android)
-=============================================
-Package: com.makina.gestao · v1.2.0
+MAKINA Enterprise — Sistema de Gestão Empresarial
+=================================================
+Package: com.makina.gestao · v2.0.0
 
-INSTALAÇÃO
-1. Instale o APK (permitir fontes desconhecidas)
-2. Entre com as credenciais da organização
-3. Autorize as permissões do dispositivo
+MÓDULOS
+Dashboard · Clientes · Fornecedores · Produtos/Stock
+Vendas/POS · Compras · Orçamentos · Serviços
+Caixa · Despesas · Contas a pagar/receber
+Contabilidade · Relatórios · Utilizadores (RBAC)
+Auditoria · Notificações · Backup · Multi-dispositivo
+Termos · Privacidade · Permissões de dispositivo
 
-MULTI-DISPOSITIVO (código de rastreamento)
-------------------------------------------
-1. No dispositivo PRINCIPAL (admin):
-   Configurações → Multi-dispositivo → copiar o código
-   → «Exportar pacote da empresa»
-2. No NOVO dispositivo:
-   Ecrã de login → «Vincular dispositivo»
-   → colar o código + importar o ficheiro .json
-3. Entrar com o mesmo utilizador/palavra-passe
+PERFIS
+SUPER_ADMIN, ADMIN, MANAGER, FINANCE, SELLER,
+WAREHOUSE, TECHNICIAN, AUDITOR, OPERATOR
 
-CORREÇÕES v1.2
-- Vendas: stock revalidado na transação, merge de linhas,
-  totais com 2 casas, erros claros, pagamento não-cash
-- Código de empresa MAK-XXXX-YYYY em todos os aparelhos
+MULTI-DISPOSITIVO
+Configurações → código de rastreamento + pacote empresa
+Login → Vincular dispositivo
+
+Instale o APK, autorize permissões e use as credenciais
+da organização. Dados offline no dispositivo.

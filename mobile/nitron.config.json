@@ -1,8 +1,8 @@
 {
   "name": "MAKINA",
   "packageId": "com.makina.gestao",
-  "version": "1.2.0",
-  "versionCode": 12,
+  "version": "2.0.0",
+  "versionCode": 20,
   "entry": "dist/index.html",
   "orientation": "auto",
   "statusBar": true,
