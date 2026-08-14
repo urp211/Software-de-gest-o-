@@ -1,23 +1,23 @@
-MAKINA — Sistema de Gestão Empresarial (Android APK)
-====================================================
-
-Ficheiro: MAKINA-Gestao-1.0.0.apk  |  MAKINA.apk
-Package: com.makina.gestao · versão 1.1.0
-Android 5.0+ (API 21–34)
+MAKINA — Gestão Empresarial Offline (Android)
+=============================================
+Package: com.makina.gestao · v1.2.0
 
 INSTALAÇÃO
-----------
-1. Copie o APK para o telemóvel
-2. Ative «Instalar apps desconhecidas»
-3. Abra o APK → Instalar → Abrir
-4. Entre com as credenciais da sua organização
-5. Autorize as permissões pedidas na primeira sessão
+1. Instale o APK (permitir fontes desconhecidas)
+2. Entre com as credenciais da organização
+3. Autorize as permissões do dispositivo
 
-PERMISSÕES DO DISPOSITIVO
--------------------------
-- Câmara / Galeria — fotos de produtos
-- Notificações — alertas de stock e caixa
-- Armazenamento — backups e exportações
-- Rede — deteção online/offline (app funciona offline)
+MULTI-DISPOSITIVO (código de rastreamento)
+------------------------------------------
+1. No dispositivo PRINCIPAL (admin):
+   Configurações → Multi-dispositivo → copiar o código
+   → «Exportar pacote da empresa»
+2. No NOVO dispositivo:
+   Ecrã de login → «Vincular dispositivo»
+   → colar o código + importar o ficheiro .json
+3. Entrar com o mesmo utilizador/palavra-passe
 
-Os dados ficam apenas neste dispositivo (offline).
+CORREÇÕES v1.2
+- Vendas: stock revalidado na transação, merge de linhas,
+  totais com 2 casas, erros claros, pagamento não-cash
+- Código de empresa MAK-XXXX-YYYY em todos os aparelhos

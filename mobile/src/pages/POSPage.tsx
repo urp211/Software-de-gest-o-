@@ -75,7 +75,10 @@ export default function POSPage() {
   useEffect(() => {
     // auto-fill amount paid with total when cart changes (cash convenience)
     if (paymentMethod === "CASH") {
-      setAmountPaid(total ? String(Number(total.toFixed(2))) : "");
+      setAmountPaid(total > 0 ? String(Number(total.toFixed(2))) : "");
+    } else if (paymentMethod !== "CASH" && total > 0) {
+      // Non-cash: exact amount, no change expected
+      setAmountPaid(String(Number(total.toFixed(2))));
     }
   }, [total, paymentMethod]);
 
@@ -120,34 +123,57 @@ export default function POSPage() {
   const checkout = async (e?: FormEvent) => {
     e?.preventDefault();
     if (!user || cart.length === 0) return;
+
+    // Client-side guards before hitting DB
+    if (cart.some((i) => !i.id || i.quantity < 1)) {
+      setError("Carrinho contém itens inválidos.");
+      return;
+    }
+    if (cart.some((i) => i.quantity > i.stock)) {
+      setError("Quantidade superior ao stock disponível.");
+      return;
+    }
+    if (paymentMethod === "CASH" && paid + 0.011 < total) {
+      setError("Valor entregue inferior ao total da fatura.");
+      return;
+    }
+
     setBusy(true);
     setError("");
     setMsg("");
     try {
       const res = await createSale({
         items: cart.map((i) => ({
-          id: i.id!,
+          id: Number(i.id),
           name: i.name,
           trackingCode: i.trackingCode,
-          price: i.price,
-          cost: i.cost,
-          quantity: i.quantity,
+          price: Number(i.price),
+          cost: Number(i.cost ?? 0),
+          quantity: Number(i.quantity),
         })),
-        operatorId: user.id,
+        operatorId: Number(user.id),
         operatorName: user.name,
         clientId: clientId ? parseInt(clientId, 10) : null,
         clientName: clientName || null,
         clientNif: clientNif || null,
         paymentMethod,
-        amountPaid: paid,
-        discount: disc,
-        taxRate,
+        amountPaid: Number(paid),
+        discount: Number(disc) || 0,
+        taxRate: Number(taxRate) || 0,
         notes: notes || null,
       });
-      setMsg(`Venda ${res.invoiceNumber} · Troco ${moneyShort(res.changeGiven)}`);
+      setMsg(
+        `Venda ${res.invoiceNumber} concluída` +
+          (res.changeGiven > 0 ? ` · Troco ${moneyShort(res.changeGiven)}` : "")
+      );
       setCart([]);
       setDiscount("");
       setNotes("");
+      setAmountPaid("");
+      setClientId("");
+      setClientName("");
+      setClientNif("");
+      // Refresh stock from DB
       setParts(await listParts());
       const full = await getSaleFull(res.saleId);
       if (full) {
@@ -158,7 +184,14 @@ export default function POSPage() {
         });
       }
     } catch (err) {
+      console.error("createSale error", err);
       setError(err instanceof Error ? err.message : "Erro ao processar venda");
+      // Refresh parts in case stock changed
+      try {
+        setParts(await listParts());
+      } catch {
+        /* ignore */
+      }
     } finally {
       setBusy(false);
     }

@@ -10,6 +10,8 @@ import {
   Bell,
   Camera,
   RefreshCw,
+  Fingerprint,
+  Copy,
 } from "lucide-react";
 import {
   exportBackup,
@@ -18,7 +20,7 @@ import {
   updateSettings,
   addAnnouncement,
 } from "../lib/db";
-import { fileToCompressedDataUrl, readJsonFile } from "../lib/image";
+import { fileToCompressedDataUrl, readJsonFile, downloadJson } from "../lib/image";
 import { useAuth } from "../hooks/useAuth";
 import {
   checkPermissions,
@@ -30,6 +32,14 @@ import {
   shareFileJson,
   type DevicePermissionMap,
 } from "../lib/device";
+import {
+  ensureOrgTracking,
+  exportCompanyPack,
+  getOrgBinding,
+  generateTrackingCode,
+  saveOrgBinding,
+  getDeviceId,
+} from "../lib/sync";
 
 export default function SettingsPage() {
   const { user } = useAuth();
@@ -55,6 +65,8 @@ export default function SettingsPage() {
   const [perms, setPerms] = useState<DevicePermissionMap | null>(null);
   const [deviceLabel, setDeviceLabel] = useState("");
   const [netLabel, setNetLabel] = useState("");
+  const [orgCode, setOrgCode] = useState("");
+  const [orgName, setOrgName] = useState("");
 
   const refreshDevice = async () => {
     const [p, d, n] = await Promise.all([
@@ -68,7 +80,7 @@ export default function SettingsPage() {
   };
 
   useEffect(() => {
-    getSettings().then((s) =>
+    getSettings().then(async (s) => {
       setForm({
         companyName: s.companyName || "",
         nif: s.nif || "",
@@ -81,10 +93,24 @@ export default function SettingsPage() {
         allowOperatorSecondCopy: !!s.allowOperatorSecondCopy,
         lowStockThreshold: s.lowStockThreshold ?? 5,
         logoDataUrl: s.logoDataUrl || null,
-      })
-    );
+      });
+      if (isAdmin) {
+        const b = await ensureOrgTracking(s.companyName);
+        setOrgCode(b.trackingCode);
+        setOrgName(b.companyName);
+        if (!s.orgTrackingCode) {
+          await updateSettings({ orgTrackingCode: b.trackingCode });
+        }
+      } else {
+        const b = getOrgBinding();
+        if (b) {
+          setOrgCode(b.trackingCode);
+          setOrgName(b.companyName);
+        }
+      }
+    });
     refreshDevice();
-  }, []);
+  }, [isAdmin]);
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -187,6 +213,107 @@ export default function SettingsPage() {
 
       {msg && <div className="alert alert-ok">{msg}</div>}
       {error && <div className="alert alert-error">{error}</div>}
+
+      {/* Multi-device company tracking */}
+      <div className="card mb-2">
+        <div className="flex-between mb-1">
+          <strong style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <Fingerprint size={18} /> Multi-dispositivo
+          </strong>
+        </div>
+        <p className="text-muted" style={{ fontSize: "0.85rem" }}>
+          Código de rastreamento da empresa — use o mesmo código em todos os
+          telemóveis/tablets. Exporte o pacote no principal e importe nos outros.
+        </p>
+        <div
+          style={{
+            background: "#0f172a",
+            color: "#e2e8f0",
+            borderRadius: 12,
+            padding: "0.85rem 1rem",
+            fontFamily: "ui-monospace, monospace",
+            fontSize: "1.05rem",
+            letterSpacing: "0.06em",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: 8,
+          }}
+        >
+          <span>{orgCode || "—"}</span>
+          {orgCode && (
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              style={{ color: "#93c5fd", borderColor: "#334155" }}
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(orgCode);
+                  setMsg("Código copiado.");
+                } catch {
+                  setMsg(orgCode);
+                }
+              }}
+            >
+              <Copy size={14} />
+            </button>
+          )}
+        </div>
+        {orgName && (
+          <div className="text-muted" style={{ fontSize: "0.8rem", marginTop: 6 }}>
+            {orgName}
+          </div>
+        )}
+        {isAdmin && (
+          <div className="fab-row mt-2">
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={async () => {
+                try {
+                  const pack = await exportCompanyPack(user?.name);
+                  const stamp = new Date()
+                    .toISOString()
+                    .slice(0, 19)
+                    .replace(/[:T]/g, "-");
+                  const filename = `MAKINA-empresa-${pack.trackingCode}-${stamp}.json`;
+                  downloadJson(filename, pack);
+                  await shareFileJson(filename, pack);
+                  setMsg("Pacote da empresa exportado. Partilhe com os outros dispositivos.");
+                } catch (e) {
+                  setError(e instanceof Error ? e.message : "Falha ao exportar pacote");
+                }
+              }}
+            >
+              Exportar pacote da empresa
+            </button>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={async () => {
+                if (
+                  !confirm(
+                    "Gerar um NOVO código invalida o anterior nos outros dispositivos. Continuar?"
+                  )
+                )
+                  return;
+                const code = generateTrackingCode(form.companyName);
+                await updateSettings({ orgTrackingCode: code });
+                saveOrgBinding({
+                  trackingCode: code,
+                  companyName: form.companyName || orgName || "MAKINA",
+                  boundAt: Date.now(),
+                  deviceId: getDeviceId(),
+                });
+                setOrgCode(code);
+                setMsg("Novo código gerado: " + code);
+              }}
+            >
+              Gerar novo código
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* Device & permissions */}
       <div className="card mb-2">
@@ -430,7 +557,7 @@ export default function SettingsPage() {
             <span className="text-muted" style={{ display: "flex", gap: 8, alignItems: "center" }}>
               <Database size={16} /> Base de dados
             </span>
-            <strong style={{ fontSize: "0.9rem" }}>IndexedDB v2 (local)</strong>
+            <strong style={{ fontSize: "0.9rem" }}>IndexedDB v3 (local)</strong>
           </div>
           <div className="flex-between">
             <span className="text-muted" style={{ display: "flex", gap: 8, alignItems: "center" }}>

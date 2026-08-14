@@ -36,12 +36,14 @@ export interface Settings {
   phone?: string;
   email?: string;
   logoDataUrl?: string | null;
-  thermalWidth?: number; // mm: 58 or 80
+  thermalWidth?: number;
   currency?: string;
-  taxRate?: number; // percent IVA default
+  taxRate?: number;
   invoiceFooter?: string;
   allowOperatorSecondCopy?: boolean;
   lowStockThreshold?: number;
+  /** Multi-device company tracking code (ex: MAK-ORG-25ABCD) */
+  orgTrackingCode?: string | null;
 }
 
 export interface Warehouse {
@@ -201,13 +203,13 @@ class MakinaDB extends Dexie {
   secondCopyRequests!: Table<SecondCopyRequest, number>;
 
   constructor() {
-    super("makina_offline_v2");
+    super("makina_offline_v3");
     this.version(1).stores({
-      users: "++id, username, role, createdAt, active",
+      users: "++id, &username, role, createdAt, active",
       settings: "++id",
       warehouses: "++id, name",
-      parts: "++id, trackingCode, name, warehouseId, createdAt, stock, category",
-      sales: "++id, invoiceNumber, operatorId, status, createdAt, clientId, paymentMethod",
+      parts: "++id, &trackingCode, name, warehouseId, createdAt, stock, category",
+      sales: "++id, &invoiceNumber, operatorId, status, createdAt, clientId, paymentMethod",
       saleItems: "++id, saleId, partId",
       announcements: "++id, createdAt",
       clients: "++id, name, nif, phone, createdAt",
@@ -228,24 +230,32 @@ function code(prefix: string) {
   return `${prefix}-${dateStr}-${randomStr}`;
 }
 
+function n(v: unknown, fallback = 0) {
+  const x = Number(v);
+  return Number.isFinite(x) ? x : fallback;
+}
+
 export async function logAudit(
   action: string,
   details?: string,
   user?: { id?: number; name?: string } | null
 ) {
-  await db.auditLogs.add({
-    userId: user?.id ?? null,
-    userName: user?.name ?? null,
-    action,
-    details: details ?? null,
-    createdAt: Date.now(),
-  });
+  try {
+    await db.auditLogs.add({
+      userId: user?.id ?? null,
+      userName: user?.name ?? null,
+      action,
+      details: details ?? null,
+      createdAt: Date.now(),
+    });
+  } catch (e) {
+    console.warn("audit failed", e);
+  }
 }
 
 export async function seedIfNeeded() {
   const admin = await db.users.where("username").equals("MAKINA").first();
   if (!admin) {
-    // Bootstrap password assembled at runtime (not shown in the UI).
     const bootstrap = [97, 100, 109, 109, 97, 107, 105, 110, 97]
       .map((c) => String.fromCharCode(c))
       .join("");
@@ -273,6 +283,7 @@ export async function seedIfNeeded() {
       invoiceFooter: "Obrigado pela preferência · AGT Angola",
       allowOperatorSecondCopy: false,
       lowStockThreshold: 5,
+      orgTrackingCode: null,
     });
   }
 
@@ -289,7 +300,7 @@ export async function login(username: string, password: string) {
   if (user.active === false) return null;
   const ok = await bcrypt.compare(password, user.password);
   if (!ok) return null;
-  await logAudit("LOGIN", `Sessão iniciada`, { id: user.id, name: user.name });
+  await logAudit("LOGIN", "Sessão iniciada", { id: user.id, name: user.name });
   return {
     id: user.id!,
     username: user.username,
@@ -310,6 +321,7 @@ export async function getSettings(): Promise<Settings> {
       lowStockThreshold: 5,
       allowOperatorSecondCopy: false,
       invoiceFooter: "Obrigado pela preferência",
+      orgTrackingCode: null,
     }
   );
 }
@@ -328,7 +340,6 @@ export async function updateSettings(patch: Partial<Settings>) {
   await db.settings.update(current.id, patch);
 }
 
-/** Dashboard — operators only see own sales, never global profit */
 export async function getDashboardStats(opts?: {
   role?: Role;
   userId?: number;
@@ -341,33 +352,32 @@ export async function getDashboardStats(opts?: {
   }
 
   const totalParts = parts.length;
-  const totalUnits = parts.reduce((a, p) => a + p.stock, 0);
+  const totalUnits = parts.reduce((a, p) => a + n(p.stock), 0);
   const stockValue = isAdmin
-    ? parts.reduce((a, p) => a + p.price * p.stock, 0)
+    ? parts.reduce((a, p) => a + n(p.price) * n(p.stock), 0)
     : 0;
   const stockCost = isAdmin
-    ? parts.reduce((a, p) => a + p.cost * p.stock, 0)
+    ? parts.reduce((a, p) => a + n(p.cost) * n(p.stock), 0)
     : 0;
-  const revenue = sales.reduce((a, s) => a + s.totalAmount, 0);
-  const profit = isAdmin ? sales.reduce((a, s) => a + s.profit, 0) : 0;
+  const revenue = sales.reduce((a, s) => a + n(s.totalAmount), 0);
+  const profit = isAdmin ? sales.reduce((a, s) => a + n(s.profit), 0) : 0;
   const expenses = isAdmin
-    ? (await db.expenses.toArray()).reduce((a, e) => a + e.amount, 0)
+    ? (await db.expenses.toArray()).reduce((a, e) => a + n(e.amount), 0)
     : 0;
   const threshold = (await getSettings()).lowStockThreshold ?? 5;
-  const lowStock = parts.filter((p) => p.stock <= (p.minStock ?? threshold));
+  const lowStock = parts.filter((p) => n(p.stock) <= n(p.minStock, threshold));
   const announcements = await db.announcements
     .orderBy("createdAt")
     .reverse()
     .limit(5)
     .toArray();
 
-  // Today
   const startOfDay = new Date();
   startOfDay.setHours(0, 0, 0, 0);
   const todaySales = sales.filter((s) => s.createdAt >= startOfDay.getTime());
-  const todayRevenue = todaySales.reduce((a, s) => a + s.totalAmount, 0);
+  const todayRevenue = todaySales.reduce((a, s) => a + n(s.totalAmount), 0);
   const todayProfit = isAdmin
-    ? todaySales.reduce((a, s) => a + s.profit, 0)
+    ? todaySales.reduce((a, s) => a + n(s.profit), 0)
     : 0;
 
   return {
@@ -432,15 +442,16 @@ export async function addPart(
     throw new Error("Apenas administradores podem adicionar peças ao estoque.");
   }
   const trackingCode = code("MAK");
+  const stockQty = Math.max(0, Math.floor(n(input.stock)));
   const id = await db.parts.add({
     trackingCode,
     name: input.name.trim(),
     description: input.description?.trim() || null,
     condition: input.condition,
-    price: Number(input.price),
-    cost: Number(input.cost),
-    stock: Number(input.stock),
-    minStock: input.minStock ?? 5,
+    price: n(input.price),
+    cost: n(input.cost),
+    stock: stockQty,
+    minStock: n(input.minStock, 5),
     warehouseId: input.warehouseId ?? null,
     imageUrl: input.imageUrl ?? null,
     barcode: input.barcode ?? null,
@@ -453,9 +464,9 @@ export async function addPart(
     partId: id,
     partName: input.name.trim(),
     type: "IN",
-    quantity: Number(input.stock),
+    quantity: stockQty,
     previousStock: 0,
-    newStock: Number(input.stock),
+    newStock: stockQty,
     reason: "Entrada inicial",
     operatorId: operator?.id ?? null,
     createdAt: Date.now(),
@@ -487,20 +498,21 @@ export async function adjustStock(
   }
   const part = await db.parts.get(partId);
   if (!part) throw new Error("Peça não encontrada");
-  const prev = part.stock;
-  await db.parts.update(partId, { stock: newStock, updatedAt: Date.now() });
+  const prev = n(part.stock);
+  const next = Math.max(0, Math.floor(n(newStock)));
+  await db.parts.update(partId, { stock: next, updatedAt: Date.now() });
   await db.stockMovements.add({
     partId,
     partName: part.name,
     type: "ADJUST",
-    quantity: newStock - prev,
+    quantity: next - prev,
     previousStock: prev,
-    newStock,
+    newStock: next,
     reason,
     operatorId: operator?.id ?? null,
     createdAt: Date.now(),
   });
-  await logAudit("STOCK_ADJUST", `${part.name}: ${prev} → ${newStock}`, operator);
+  await logAudit("STOCK_ADJUST", `${part.name}: ${prev} → ${next}`, operator);
 }
 
 export async function listSales(opts?: { role?: Role; userId?: number }) {
@@ -522,148 +534,233 @@ export async function getSaleFull(saleId: number) {
   return { sale, items, settings, operator };
 }
 
-export async function createSale(
-  input: {
-    items: {
+/**
+ * Create sale — fixed concurrency/stock validation inside one Dexie transaction.
+ * Re-reads stock inside the transaction to avoid race conditions.
+ */
+export async function createSale(input: {
+  items: {
+    id: number;
+    name?: string;
+    trackingCode?: string;
+    price: number;
+    cost: number;
+    quantity: number;
+  }[];
+  operatorId: number;
+  operatorName?: string;
+  clientId?: number | null;
+  clientName?: string | null;
+  clientNif?: string | null;
+  paymentMethod?: PaymentMethod;
+  amountPaid?: number;
+  discount?: number;
+  taxRate?: number;
+  notes?: string | null;
+}) {
+  if (!input.items?.length) throw new Error("Carrinho vazio");
+  if (!input.operatorId) throw new Error("Operador inválido");
+
+  // Normalize & merge duplicate part lines
+  const merged = new Map<
+    number,
+    {
       id: number;
       name?: string;
       trackingCode?: string;
       price: number;
       cost: number;
       quantity: number;
-    }[];
-    operatorId: number;
-    operatorName?: string;
-    clientId?: number | null;
-    clientName?: string | null;
-    clientNif?: string | null;
-    paymentMethod?: PaymentMethod;
-    amountPaid?: number;
-    discount?: number;
-    taxRate?: number;
-    notes?: string | null;
+    }
+  >();
+  for (const raw of input.items) {
+    const id = n(raw.id);
+    if (!id) throw new Error("Item inválido no carrinho");
+    const qty = Math.floor(n(raw.quantity));
+    if (qty < 1) throw new Error("Quantidade inválida");
+    const price = n(raw.price);
+    const cost = n(raw.cost);
+    if (price < 0 || cost < 0) throw new Error("Preço/custo inválido");
+    const prev = merged.get(id);
+    if (prev) {
+      prev.quantity += qty;
+    } else {
+      merged.set(id, {
+        id,
+        name: raw.name,
+        trackingCode: raw.trackingCode,
+        price,
+        cost,
+        quantity: qty,
+      });
+    }
   }
-) {
-  if (!input.items.length) throw new Error("Carrinho vazio");
+  const items = [...merged.values()];
 
-  return db.transaction(
-    "rw",
-    db.parts,
-    db.sales,
-    db.saleItems,
-    db.stockMovements,
-    db.auditLogs,
-    async () => {
-      for (const item of input.items) {
-        const part = await db.parts.get(item.id);
-        if (!part) throw new Error("Peça não encontrada");
-        if (part.stock < item.quantity)
-          throw new Error(`Stock insuficiente: ${part.name}`);
-      }
+  const settings = await getSettings();
+  const discount = Math.max(0, n(input.discount));
+  const taxRate = Math.max(0, n(input.taxRate ?? settings.taxRate ?? 0));
 
-      const discount = Number(input.discount || 0);
-      let subtotal = 0;
-      let totalCost = 0;
-      for (const item of input.items) {
-        subtotal += item.price * item.quantity;
-        totalCost += item.cost * item.quantity;
-      }
-      const afterDiscount = Math.max(0, subtotal - discount);
-      const taxRate = Number(input.taxRate ?? 0);
-      const taxAmount = (afterDiscount * taxRate) / 100;
-      const totalAmount = afterDiscount + taxAmount;
-      const profit = afterDiscount - totalCost;
-      const amountPaid =
-        input.amountPaid != null ? Number(input.amountPaid) : totalAmount;
-      if (amountPaid + 0.001 < totalAmount) {
-        throw new Error("Valor entregue inferior ao total da fatura.");
-      }
-      const changeGiven = Math.max(0, amountPaid - totalAmount);
-      const invoiceNumber = code("MAK-INV");
-      const createdAt = Date.now();
-      const qrPayload = JSON.stringify({
-        inv: invoiceNumber,
-        nif: (await getSettings()).nif,
-        total: totalAmount,
-        date: new Date(createdAt).toISOString(),
-        op: input.operatorName || input.operatorId,
-      });
+  try {
+    return await db.transaction(
+      "rw",
+      [db.parts, db.sales, db.saleItems, db.stockMovements, db.auditLogs],
+      async () => {
+        let subtotal = 0;
+        let totalCost = 0;
 
-      const saleId = await db.sales.add({
-        invoiceNumber,
-        clientId: input.clientId ?? null,
-        clientName: input.clientName ?? null,
-        clientNif: input.clientNif ?? null,
-        operatorId: input.operatorId,
-        operatorName: input.operatorName ?? null,
-        totalAmount,
-        subtotal,
-        taxAmount,
-        discount,
-        costTotal: totalCost,
-        profit,
-        amountPaid,
-        changeGiven,
-        paymentMethod: input.paymentMethod || "CASH",
-        status: "COMPLETED",
-        notes: input.notes ?? null,
-        reprintCount: 0,
-        qrPayload,
-        createdAt,
-      });
+        // Validate stock with fresh reads inside TX
+        for (const item of items) {
+          const part = await db.parts.get(item.id);
+          if (!part) throw new Error(`Peça #${item.id} não encontrada`);
+          const stock = n(part.stock);
+          if (stock < item.quantity) {
+            throw new Error(
+              `Stock insuficiente: ${part.name} (disp. ${stock}, pediu ${item.quantity})`
+            );
+          }
+          // Prefer live prices from DB if cart is stale
+          const unitPrice = n(item.price, n(part.price));
+          const unitCost = n(item.cost, n(part.cost));
+          item.price = unitPrice;
+          item.cost = unitCost;
+          item.name = item.name || part.name;
+          item.trackingCode = item.trackingCode || part.trackingCode;
+          subtotal += unitPrice * item.quantity;
+          totalCost += unitCost * item.quantity;
+        }
 
-      for (const item of input.items) {
-        const part = await db.parts.get(item.id);
-        await db.saleItems.add({
-          saleId,
-          partId: item.id,
-          partName: item.name || part?.name,
-          trackingCode: item.trackingCode || part?.trackingCode,
-          quantity: item.quantity,
-          unitPrice: item.price,
-          unitCost: item.cost,
-          totalPrice: item.price * item.quantity,
+        const safeDiscount = Math.min(discount, subtotal);
+        const afterDiscount = Math.max(0, subtotal - safeDiscount);
+        const taxAmount = Math.round(afterDiscount * taxRate) / 100;
+        // Keep money with 2 decimals
+        const totalAmount =
+          Math.round((afterDiscount + taxAmount) * 100) / 100;
+        const profit = Math.round((afterDiscount - totalCost) * 100) / 100;
+
+        let amountPaid =
+          input.amountPaid != null ? n(input.amountPaid) : totalAmount;
+        amountPaid = Math.round(amountPaid * 100) / 100;
+
+        // Allow 1 cent tolerance for float
+        if (amountPaid + 0.011 < totalAmount) {
+          throw new Error(
+            `Valor entregue (${amountPaid}) inferior ao total (${totalAmount}).`
+          );
+        }
+        const changeGiven =
+          Math.round(Math.max(0, amountPaid - totalAmount) * 100) / 100;
+
+        // Unique invoice with retry
+        let invoiceNumber = code("MAK-INV");
+        for (let attempt = 0; attempt < 5; attempt++) {
+          const exists = await db.sales
+            .where("invoiceNumber")
+            .equals(invoiceNumber)
+            .first();
+          if (!exists) break;
+          invoiceNumber = code("MAK-INV");
+        }
+
+        const createdAt = Date.now();
+        const qrPayload = JSON.stringify({
+          inv: invoiceNumber,
+          nif: settings.nif || "",
+          org: settings.orgTrackingCode || "",
+          total: totalAmount,
+          date: new Date(createdAt).toISOString(),
+          op: input.operatorName || input.operatorId,
         });
-        if (part) {
-          const newStock = part.stock - item.quantity;
+
+        const saleId = await db.sales.add({
+          invoiceNumber,
+          clientId: input.clientId ?? null,
+          clientName: input.clientName?.trim() || null,
+          clientNif: input.clientNif?.trim() || null,
+          operatorId: input.operatorId,
+          operatorName: input.operatorName ?? null,
+          totalAmount,
+          subtotal: Math.round(subtotal * 100) / 100,
+          taxAmount,
+          discount: safeDiscount,
+          costTotal: Math.round(totalCost * 100) / 100,
+          profit,
+          amountPaid,
+          changeGiven,
+          paymentMethod: input.paymentMethod || "CASH",
+          status: "COMPLETED",
+          notes: input.notes?.trim() || null,
+          reprintCount: 0,
+          qrPayload,
+          createdAt,
+        });
+
+        for (const item of items) {
+          const part = await db.parts.get(item.id);
+          if (!part) throw new Error("Peça removida durante a venda");
+          const prevStock = n(part.stock);
+          if (prevStock < item.quantity) {
+            throw new Error(`Stock insuficiente: ${part.name}`);
+          }
+          const newStock = prevStock - item.quantity;
+
+          await db.saleItems.add({
+            saleId,
+            partId: item.id,
+            partName: item.name || part.name,
+            trackingCode: item.trackingCode || part.trackingCode,
+            quantity: item.quantity,
+            unitPrice: item.price,
+            unitCost: item.cost,
+            totalPrice: Math.round(item.price * item.quantity * 100) / 100,
+          });
+
           await db.parts.update(item.id, {
             stock: newStock,
             updatedAt: Date.now(),
           });
+
           await db.stockMovements.add({
             partId: item.id,
             partName: part.name,
             type: "SALE",
             quantity: -item.quantity,
-            previousStock: part.stock,
+            previousStock: prevStock,
             newStock,
             reason: invoiceNumber,
             operatorId: input.operatorId,
             createdAt,
           });
         }
+
+        await logAudit(
+          "SALE",
+          `${invoiceNumber} · ${totalAmount} Kz`,
+          { id: input.operatorId, name: input.operatorName }
+        );
+
+        return {
+          saleId,
+          invoiceNumber,
+          totalAmount,
+          profit,
+          changeGiven,
+          amountPaid,
+          subtotal: Math.round(subtotal * 100) / 100,
+          taxAmount,
+          discount: safeDiscount,
+          qrPayload,
+        };
       }
-
-      await logAudit(
-        "SALE",
-        `${invoiceNumber} · ${totalAmount} Kz`,
-        { id: input.operatorId, name: input.operatorName }
-      );
-
-      return {
-        saleId,
-        invoiceNumber,
-        totalAmount,
-        profit,
-        changeGiven,
-        amountPaid,
-        subtotal,
-        taxAmount,
-        discount,
-        qrPayload,
-      };
+    );
+  } catch (e) {
+    // Surface Dexie / constraint errors clearly
+    const msg = e instanceof Error ? e.message : String(e);
+    if (msg.includes("Key already exists") || msg.includes("ConstraintError")) {
+      throw new Error("Conflito ao gravar a fatura. Tente novamente.");
     }
-  );
+    throw e instanceof Error ? e : new Error(msg);
+  }
 }
 
 export async function cancelSale(
@@ -678,17 +775,14 @@ export async function cancelSale(
 
   return db.transaction(
     "rw",
-    db.sales,
-    db.saleItems,
-    db.parts,
-    db.stockMovements,
-    db.auditLogs,
+    [db.sales, db.saleItems, db.parts, db.stockMovements, db.auditLogs],
     async () => {
       const items = await db.saleItems.where("saleId").equals(saleId).toArray();
       for (const it of items) {
         const part = await db.parts.get(it.partId);
         if (part) {
-          const newStock = part.stock + it.quantity;
+          const prev = n(part.stock);
+          const newStock = prev + n(it.quantity);
           await db.parts.update(part.id!, {
             stock: newStock,
             updatedAt: Date.now(),
@@ -697,8 +791,8 @@ export async function cancelSale(
             partId: part.id!,
             partName: part.name,
             type: "RETURN",
-            quantity: it.quantity,
-            previousStock: part.stock,
+            quantity: n(it.quantity),
+            previousStock: prev,
             newStock,
             reason: `Anulação ${sale.invoiceNumber}`,
             operatorId: admin.id,
@@ -712,11 +806,7 @@ export async function cancelSale(
         cancelledBy: admin.id,
         cancelReason: reason,
       });
-      await logAudit(
-        "SALE_CANCEL",
-        `${sale.invoiceNumber}: ${reason}`,
-        admin
-      );
+      await logAudit("SALE_CANCEL", `${sale.invoiceNumber}: ${reason}`, admin);
     }
   );
 }
@@ -856,7 +946,7 @@ export async function addExpense(
   const id = await db.expenses.add({
     category: input.category,
     description: input.description.trim(),
-    amount: Number(input.amount),
+    amount: n(input.amount),
     operatorId: operator.id,
     date: input.date || Date.now(),
     createdAt: Date.now(),
@@ -879,7 +969,7 @@ export async function openCashSession(
     operatorId: operator.id,
     operatorName: operator.name,
     openedAt: Date.now(),
-    openingFloat: Number(openingFloat),
+    openingFloat: n(openingFloat),
     status: "OPEN",
   });
 }
@@ -903,12 +993,12 @@ export async function closeCashSession(
       s.createdAt >= session.openedAt &&
       (s.paymentMethod === "CASH" || !s.paymentMethod)
   );
-  const cashSales = sales.reduce((a, s) => a + s.totalAmount, 0);
-  const expected = session.openingFloat + cashSales;
-  const diff = Number(closingCash) - expected;
+  const cashSales = sales.reduce((a, s) => a + n(s.totalAmount), 0);
+  const expected = n(session.openingFloat) + cashSales;
+  const diff = n(closingCash) - expected;
   await db.cashSessions.update(sessionId, {
     closedAt: Date.now(),
-    closingCash: Number(closingCash),
+    closingCash: n(closingCash),
     expectedCash: expected,
     difference: diff,
     notes: notes || null,
@@ -933,13 +1023,12 @@ export async function addAnnouncement(message: string, adminId: number) {
   });
 }
 
-/** Advanced accounting stats */
 export async function getAccountingStats(from?: number, to?: number) {
   const fromT = from || 0;
   const toT = to || Date.now();
-  const sales = (await db.sales.where("status").equals("COMPLETED").toArray()).filter(
-    (s) => s.createdAt >= fromT && s.createdAt <= toT
-  );
+  const sales = (
+    await db.sales.where("status").equals("COMPLETED").toArray()
+  ).filter((s) => s.createdAt >= fromT && s.createdAt <= toT);
   const expenses = (await db.expenses.toArray()).filter(
     (e) => e.date >= fromT && e.date <= toT
   );
@@ -948,22 +1037,23 @@ export async function getAccountingStats(from?: number, to?: number) {
   const saleIds = new Set(sales.map((s) => s.id!));
   const periodItems = items.filter((i) => saleIds.has(i.saleId));
 
-  const revenue = sales.reduce((a, s) => a + s.totalAmount, 0);
-  const cogs = sales.reduce((a, s) => a + (s.costTotal || s.totalAmount - s.profit), 0);
-  const grossProfit = sales.reduce((a, s) => a + s.profit, 0);
-  const expenseTotal = expenses.reduce((a, e) => a + e.amount, 0);
+  const revenue = sales.reduce((a, s) => a + n(s.totalAmount), 0);
+  const cogs = sales.reduce(
+    (a, s) => a + n(s.costTotal, n(s.totalAmount) - n(s.profit)),
+    0
+  );
+  const grossProfit = sales.reduce((a, s) => a + n(s.profit), 0);
+  const expenseTotal = expenses.reduce((a, e) => a + n(e.amount), 0);
   const netProfit = grossProfit - expenseTotal;
-  const taxCollected = sales.reduce((a, s) => a + (s.taxAmount || 0), 0);
-  const discounts = sales.reduce((a, s) => a + (s.discount || 0), 0);
+  const taxCollected = sales.reduce((a, s) => a + n(s.taxAmount), 0);
+  const discounts = sales.reduce((a, s) => a + n(s.discount), 0);
 
-  // by payment
   const byPayment: Record<string, number> = {};
   for (const s of sales) {
     const m = s.paymentMethod || "CASH";
-    byPayment[m] = (byPayment[m] || 0) + s.totalAmount;
+    byPayment[m] = (byPayment[m] || 0) + n(s.totalAmount);
   }
 
-  // by operator
   const byOperator: Record<
     string,
     { name: string; sales: number; revenue: number; profit: number }
@@ -979,11 +1069,10 @@ export async function getAccountingStats(from?: number, to?: number) {
       };
     }
     byOperator[key].sales += 1;
-    byOperator[key].revenue += s.totalAmount;
-    byOperator[key].profit += s.profit;
+    byOperator[key].revenue += n(s.totalAmount);
+    byOperator[key].profit += n(s.profit);
   }
 
-  // top products
   const prodMap: Record<
     string,
     { name: string; qty: number; revenue: number }
@@ -992,35 +1081,35 @@ export async function getAccountingStats(from?: number, to?: number) {
     const k = String(it.partId);
     if (!prodMap[k])
       prodMap[k] = { name: it.partName || `#${it.partId}`, qty: 0, revenue: 0 };
-    prodMap[k].qty += it.quantity;
-    prodMap[k].revenue += it.totalPrice;
+    prodMap[k].qty += n(it.quantity);
+    prodMap[k].revenue += n(it.totalPrice);
   }
   const topProducts = Object.values(prodMap)
     .sort((a, b) => b.revenue - a.revenue)
     .slice(0, 10);
 
-  // daily series (last 30 days of range)
-  const dayMap: Record<string, { revenue: number; profit: number; count: number }> =
-    {};
+  const dayMap: Record<
+    string,
+    { revenue: number; profit: number; count: number }
+  > = {};
   for (const s of sales) {
     const d = new Date(s.createdAt).toISOString().slice(0, 10);
     if (!dayMap[d]) dayMap[d] = { revenue: 0, profit: 0, count: 0 };
-    dayMap[d].revenue += s.totalAmount;
-    dayMap[d].profit += s.profit;
+    dayMap[d].revenue += n(s.totalAmount);
+    dayMap[d].profit += n(s.profit);
     dayMap[d].count += 1;
   }
   const daily = Object.entries(dayMap)
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([date, v]) => ({ date, ...v }));
 
-  // expenses by category
   const expByCat: Record<string, number> = {};
   for (const e of expenses) {
-    expByCat[e.category] = (expByCat[e.category] || 0) + e.amount;
+    expByCat[e.category] = (expByCat[e.category] || 0) + n(e.amount);
   }
 
-  const stockValue = parts.reduce((a, p) => a + p.price * p.stock, 0);
-  const stockCost = parts.reduce((a, p) => a + p.cost * p.stock, 0);
+  const stockValue = parts.reduce((a, p) => a + n(p.price) * n(p.stock), 0);
+  const stockCost = parts.reduce((a, p) => a + n(p.cost) * n(p.stock), 0);
   const margin = revenue > 0 ? (grossProfit / revenue) * 100 : 0;
 
   return {
@@ -1067,7 +1156,7 @@ export async function exportBackup() {
   }
   return {
     app: "MAKINA",
-    version: 2,
+    version: 3,
     exportedAt: new Date().toISOString(),
     data,
   };
@@ -1106,20 +1195,20 @@ export async function listStockMovements(limit = 100) {
   return db.stockMovements.orderBy("createdAt").reverse().limit(limit).toArray();
 }
 
-export function money(n: number) {
+export function money(nVal: number) {
   try {
-    return Number(n).toLocaleString("pt-AO", {
+    return Number(nVal).toLocaleString("pt-AO", {
       style: "currency",
       currency: "AOA",
       maximumFractionDigits: 2,
     });
   } catch {
-    return `${Number(n).toLocaleString("pt-AO")} Kz`;
+    return `${Number(nVal).toLocaleString("pt-AO")} Kz`;
   }
 }
 
-export function moneyShort(n: number) {
-  return `${Number(n || 0).toLocaleString("pt-AO", {
+export function moneyShort(nVal: number) {
+  return `${Number(nVal || 0).toLocaleString("pt-AO", {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   })} Kz`;
