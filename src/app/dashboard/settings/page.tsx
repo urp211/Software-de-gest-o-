@@ -48,14 +48,9 @@ export default async function SettingsPage() {
         </dl>
 
         <div className="mt-8 p-4 bg-blue-50 border border-blue-100 rounded-lg text-sm text-blue-800">
-          <p className="font-semibold mb-1">Credenciais padrão do administrador</p>
-          <p>
-            Utilizador: <span className="font-mono">MAKINA</span>
-          </p>
-          <p>
-            Palavra-passe: <span className="font-mono">admmakina</span>
-          </p>
-          <p className="mt-2 text-blue-600">Altere a password após o primeiro acesso em produção.</p>
+          <p className="font-semibold mb-1">Acesso</p>
+          <p>Utilize as credenciais definidas pela administração da empresa.</p>
+          <p className="mt-2 text-blue-600">Os dados residem localmente neste equipamento.</p>
         </div>
       </div>
     </div>

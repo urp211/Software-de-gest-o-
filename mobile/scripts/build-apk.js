@@ -114,7 +114,7 @@ function main() {
   log("APK pronto:", named);
   log("Tamanho:", kb, "KB");
   log("Package: com.makina.gestao");
-  log("Login: MAKINA / admmakina");
+  log("Acesso: credenciais da organização");
   log("══════════════════════════════════════");
 }
 

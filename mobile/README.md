@@ -14,7 +14,11 @@ App Android instalável (APK) + PWA responsiva. **100% offline** após a instala
 | Package | `com.makina.gestao` |
 | minSdk | 21 (Android 5.0+) |
 | targetSdk | 34 |
+<<<<<<< HEAD
 | Login | `MAKINA` / `admmakina` |
+=======
+| Acesso | Credenciais da organização |
+>>>>>>> 1d02c64 (feat: sistema empresarial com permissões de dispositivo e UI sem credenciais)
 
 ### Instalar no telemóvel
 

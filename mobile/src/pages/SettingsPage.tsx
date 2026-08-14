@@ -6,6 +6,10 @@ import {
   Download,
   Upload,
   Shield,
+  Share2,
+  Bell,
+  Camera,
+  RefreshCw,
 } from "lucide-react";
 import {
   exportBackup,
@@ -14,8 +18,18 @@ import {
   updateSettings,
   addAnnouncement,
 } from "../lib/db";
-import { downloadJson, fileToCompressedDataUrl, readJsonFile } from "../lib/image";
+import { fileToCompressedDataUrl, readJsonFile } from "../lib/image";
 import { useAuth } from "../hooks/useAuth";
+import {
+  checkPermissions,
+  getDeviceInfo,
+  getNetworkStatus,
+  notifyLocal,
+  requestAllPermissions,
+  saveBackupToDevice,
+  shareFileJson,
+  type DevicePermissionMap,
+} from "../lib/device";
 
 export default function SettingsPage() {
   const { user } = useAuth();
@@ -38,6 +52,20 @@ export default function SettingsPage() {
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [perms, setPerms] = useState<DevicePermissionMap | null>(null);
+  const [deviceLabel, setDeviceLabel] = useState("");
+  const [netLabel, setNetLabel] = useState("");
+
+  const refreshDevice = async () => {
+    const [p, d, n] = await Promise.all([
+      checkPermissions(),
+      getDeviceInfo(),
+      getNetworkStatus(),
+    ]);
+    setPerms(p);
+    setDeviceLabel([d.platform, d.model, d.osVersion].filter(Boolean).join(" · "));
+    setNetLabel(n.connected ? `Online (${n.connectionType})` : "Offline");
+  };
 
   useEffect(() => {
     getSettings().then((s) =>
@@ -55,6 +83,7 @@ export default function SettingsPage() {
         logoDataUrl: s.logoDataUrl || null,
       })
     );
+    refreshDevice();
   }, []);
 
   const onSubmit = async (e: FormEvent) => {
@@ -85,8 +114,21 @@ export default function SettingsPage() {
   const onBackup = async () => {
     const data = await exportBackup();
     const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
-    downloadJson(`MAKINA-backup-${stamp}.json`, data);
-    setMsg("Backup exportado.");
+    const filename = `MAKINA-backup-${stamp}.json`;
+    const saved = await saveBackupToDevice(filename, data);
+    if (saved.ok) {
+      setMsg(`Backup guardado: ${saved.path}`);
+      await notifyLocal("Backup MAKINA", `Ficheiro ${filename} criado.`);
+    } else {
+      setError(saved.error || "Falha no backup");
+    }
+  };
+
+  const onShareBackup = async () => {
+    const data = await exportBackup();
+    const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+    const ok = await shareFileJson(`MAKINA-backup-${stamp}.json`, data);
+    setMsg(ok ? "Partilha iniciada." : "Partilha indisponível neste dispositivo.");
   };
 
   const onRestore = async (file?: File | null) => {
@@ -96,7 +138,7 @@ export default function SettingsPage() {
     try {
       const payload = await readJsonFile<{ data: Record<string, unknown[]> }>(file);
       await importBackup(payload);
-      setMsg("Backup restaurado. Recarregue a app.");
+      setMsg("Backup restaurado. A recarregar…");
       setTimeout(() => window.location.reload(), 800);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Falha no restore");
@@ -114,15 +156,78 @@ export default function SettingsPage() {
     await addAnnouncement(announce, user.id);
     setAnnounce("");
     setMsg("Comunicado publicado.");
+    await notifyLocal("Comunicado MAKINA", announce.slice(0, 80));
+  };
+
+  const askPerms = async () => {
+    setBusyish(true);
+    try {
+      const r = await requestAllPermissions();
+      setPerms(r);
+      setMsg("Permissões atualizadas.");
+      await notifyLocal("MAKINA", "Permissões do dispositivo configuradas.");
+    } finally {
+      setBusyish(false);
+    }
+  };
+
+  const [busyish, setBusyish] = useState(false);
+
+  const permBadge = (s?: string) => {
+    if (s === "granted") return "badge-green";
+    if (s === "denied") return "badge-red";
+    if (s === "unavailable") return "badge-orange";
+    return "badge-blue";
   };
 
   return (
     <div>
       <h1 className="page-title">Configurações</h1>
-      <p className="page-sub">Empresa, faturação, backup e sistema offline.</p>
+      <p className="page-sub">Empresa, dispositivo, faturação e backup offline.</p>
 
       {msg && <div className="alert alert-ok">{msg}</div>}
       {error && <div className="alert alert-error">{error}</div>}
+
+      {/* Device & permissions */}
+      <div className="card mb-2">
+        <div className="flex-between mb-1">
+          <strong style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <Smartphone size={18} /> Dispositivo & permissões
+          </strong>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={refreshDevice}>
+            <RefreshCw size={14} />
+          </button>
+        </div>
+        <div className="text-muted" style={{ fontSize: "0.85rem", marginBottom: 10 }}>
+          {deviceLabel || "A detetar…"} · {netLabel || "—"}
+        </div>
+        <div className="stack" style={{ gap: 8 }}>
+          {[
+            { k: "camera" as const, label: "Câmara", icon: Camera },
+            { k: "photos" as const, label: "Galeria", icon: Camera },
+            { k: "notifications" as const, label: "Notificações", icon: Bell },
+            { k: "storage" as const, label: "Armazenamento", icon: Database },
+            { k: "network" as const, label: "Rede", icon: Smartphone },
+          ].map(({ k, label, icon: Icon }) => (
+            <div key={k} className="flex-between">
+              <span style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <Icon size={16} /> {label}
+              </span>
+              <span className={`badge ${permBadge(perms?.[k])}`}>
+                {perms?.[k] || "…"}
+              </span>
+            </div>
+          ))}
+        </div>
+        <button
+          type="button"
+          className="btn btn-primary btn-block mt-2"
+          disabled={busyish}
+          onClick={askPerms}
+        >
+          <Shield size={16} /> Pedir / atualizar permissões
+        </button>
+      </div>
 
       <div className="card mb-2">
         <div className="flex-between mb-2">
@@ -272,12 +377,14 @@ export default function SettingsPage() {
           </strong>
         </div>
         <p className="text-muted" style={{ fontSize: "0.85rem" }}>
-          Exporte um ficheiro JSON com todos os dados deste dispositivo. Guarde-o
-          em local seguro.
+          Guarde ou partilhe um ficheiro JSON com todos os dados deste dispositivo.
         </p>
         <div className="fab-row">
           <button type="button" className="btn btn-primary" onClick={onBackup}>
-            <Download size={16} /> Exportar backup
+            <Download size={16} /> Guardar backup
+          </button>
+          <button type="button" className="btn btn-ghost" onClick={onShareBackup}>
+            <Share2 size={16} /> Partilhar
           </button>
           {isAdmin && (
             <>
@@ -286,7 +393,7 @@ export default function SettingsPage() {
                 className="btn btn-ghost"
                 onClick={() => fileRef.current?.click()}
               >
-                <Upload size={16} /> Restaurar backup
+                <Upload size={16} /> Restaurar
               </button>
               <input
                 ref={fileRef}
@@ -329,7 +436,7 @@ export default function SettingsPage() {
             <span className="text-muted" style={{ display: "flex", gap: 8, alignItems: "center" }}>
               <Smartphone size={16} /> Modo
             </span>
-            <strong style={{ fontSize: "0.9rem" }}>Mobile Offline Pro</strong>
+            <strong style={{ fontSize: "0.9rem" }}>Empresarial Offline</strong>
           </div>
           <div className="flex-between">
             <span className="text-muted" style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -338,16 +445,6 @@ export default function SettingsPage() {
             <strong style={{ fontSize: "0.9rem" }}>
               {user?.role === "ADMIN" ? "Administrador" : "Operador"}
             </strong>
-          </div>
-        </div>
-
-        <div className="alert alert-info mt-2" style={{ marginBottom: 0 }}>
-          <div className="fw-bold mb-1">Credenciais padrão admin</div>
-          <div>
-            Utilizador: <code>MAKINA</code>
-          </div>
-          <div>
-            Palavra-passe: <code>admmakina</code>
           </div>
         </div>
       </div>

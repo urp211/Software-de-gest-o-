@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Camera, Package } from "lucide-react";
+import { Camera, ImagePlus, Package } from "lucide-react";
 import {
   addPart,
   listWarehouses,
@@ -10,6 +10,7 @@ import {
 import { fileToCompressedDataUrl } from "../lib/image";
 import { useAuth } from "../hooks/useAuth";
 import { AdminOnly } from "../components/AdminOnly";
+import { hapticSuccess, pickPhoto, takePhoto } from "../lib/device";
 
 function Form() {
   const { user } = useAuth();
@@ -44,6 +45,19 @@ function Form() {
       setPreview(data);
     } catch {
       setError("Não foi possível processar a foto.");
+    }
+  };
+
+  const captureNative = async (mode: "camera" | "gallery") => {
+    setError("");
+    try {
+      const data = mode === "camera" ? await takePhoto() : await pickPhoto();
+      if (data) {
+        setPreview(data);
+        await hapticSuccess();
+      }
+    } catch {
+      setError("Permissão de câmara/galeria necessária.");
     }
   };
 
@@ -110,7 +124,7 @@ function Form() {
 
         <div className="field">
           <label>Foto do produto</label>
-          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+          <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
             <div
               style={{
                 width: 88,
@@ -128,16 +142,24 @@ function Form() {
                 <Camera color="#94a3b8" />
               )}
             </div>
-            <label className="btn btn-ghost btn-sm" style={{ cursor: "pointer" }}>
-              Escolher foto
-              <input
-                type="file"
-                accept="image/*"
-                capture="environment"
-                hidden
-                onChange={(e) => onPhoto(e.target.files?.[0])}
-              />
-            </label>
+            <div className="fab-row">
+              <button type="button" className="btn btn-ghost btn-sm" onClick={() => captureNative("camera")}>
+                <Camera size={16} /> Câmara
+              </button>
+              <button type="button" className="btn btn-ghost btn-sm" onClick={() => captureNative("gallery")}>
+                <ImagePlus size={16} /> Galeria
+              </button>
+              <label className="btn btn-ghost btn-sm" style={{ cursor: "pointer" }}>
+                Ficheiro
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  hidden
+                  onChange={(e) => onPhoto(e.target.files?.[0])}
+                />
+              </label>
+            </div>
           </div>
         </div>
 

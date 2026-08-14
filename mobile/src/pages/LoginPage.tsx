@@ -6,7 +6,7 @@ import { useAuth } from "../hooks/useAuth";
 export default function LoginPage() {
   const { user, ready, login } = useAuth();
   const navigate = useNavigate();
-  const [username, setUsername] = useState("MAKINA");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -35,10 +35,10 @@ export default function LoginPage() {
           <Wrench color="white" size={32} />
         </div>
         <h1>MAKINA</h1>
-        <p>Software de Gestão Avançada</p>
+        <p>Sistema de Gestão Empresarial</p>
         <div style={{ marginTop: "0.75rem" }}>
           <span className="offline-pill">
-            <WifiOff size={12} /> 100% Offline · Mobile
+            <WifiOff size={12} /> Offline · Multi-dispositivo
           </span>
         </div>
       </div>
@@ -71,6 +71,10 @@ export default function LoginPage() {
                 autoComplete="username"
                 required
                 inputMode="text"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                placeholder="O seu utilizador"
               />
             </div>
           </div>
@@ -101,16 +105,13 @@ export default function LoginPage() {
           </div>
 
           <button className="btn btn-primary btn-block" disabled={loading} type="submit">
-            {loading ? "A entrar…" : "Entrar no Sistema"}
+            {loading ? "A autenticar…" : "Entrar"}
           </button>
         </form>
 
         <div className="login-footer">
-          <div>Desenvolvido por Makina Company / Raul Lourenço</div>
-          <div>Conforme com os requisitos AGT — Angola</div>
-          <div style={{ marginTop: "0.5rem", opacity: 0.8 }}>
-            Padrão: MAKINA / admmakina
-          </div>
+          <div>Makina Company · Gestão empresarial offline</div>
+          <div>Conforme requisitos AGT — República de Angola</div>
         </div>
       </div>
     </div>

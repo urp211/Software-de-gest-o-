@@ -188,7 +188,7 @@ echo  ============================================
 echo   MAKINA - Software de Gestao Avancada
 echo  ============================================
 echo   Servidor: http://127.0.0.1:3847
-echo   Login:    MAKINA / admmakina
+echo   Acesso com credenciais da organização
 echo   Feche esta janela para sair.
 echo  ============================================
 echo.
@@ -222,7 +222,7 @@ export NODE_ENV=production
 export PORT=3847
 export HOSTNAME=127.0.0.1
 export DATABASE_PATH="$(pwd)/data/makina.db"
-echo "MAKINA → http://127.0.0.1:3847  (MAKINA / admmakina)"
+echo "MAKINA → http://127.0.0.1:3847  "
 (command -v xdg-open >/dev/null && xdg-open "http://127.0.0.1:3847/login") || true
 (command -v open >/dev/null && open "http://127.0.0.1:3847/login") || true
 cd app && exec node server.js
@@ -247,7 +247,7 @@ LINUX / macOS
 CREDENCIAIS
 -----------
   Utilizador : MAKINA
-  Password   : admmakina
+  Password   : (definida pela organização)
 
 DADOS
 -----

@@ -1,6 +1,9 @@
+import { useCallback, useState } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider, useAuth } from "./hooks/useAuth";
 import { Shell } from "./components/Shell";
+import { PermissionsGate } from "./components/PermissionsGate";
+import { getSavedPermissionPrompted } from "./lib/device";
 import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
 import InventoryPage from "./pages/InventoryPage";
@@ -21,18 +24,27 @@ import AuditPage from "./pages/AuditPage";
 
 function Private({ children }: { children: React.ReactNode }) {
   const { user, ready } = useAuth();
+  const [permsDone, setPermsDone] = useState(getSavedPermissionPrompted());
+
+  const finishPerms = useCallback(() => setPermsDone(true), []);
+
   if (!ready) {
     return (
       <div className="login-screen">
         <div className="login-hero">
           <div className="mark">M</div>
           <h1>MAKINA</h1>
-          <p>A preparar dados offline…</p>
+          <p>A preparar o sistema offline…</p>
         </div>
       </div>
     );
   }
   if (!user) return <Navigate to="/login" replace />;
+
+  if (!permsDone) {
+    return <PermissionsGate onDone={finishPerms} />;
+  }
+
   return <>{children}</>;
 }
 

@@ -10,7 +10,11 @@ dist-apk/MAKINA-Gestao-1.0.0.apk
 
 - **100% offline** no telemóvel / tablet / foldable  
 - UI adaptável a qualquer ecrã  
+<<<<<<< HEAD
 - Login: `MAKINA` / `admmakina`  
+=======
+- Acesso com as credenciais da sua organização  
+>>>>>>> 1d02c64 (feat: sistema empresarial com permissões de dispositivo e UI sem credenciais)
 
 Instruções: `dist-apk/LEIA-ME.txt` e `mobile/README.md`.
 
@@ -44,12 +48,18 @@ npm install
 npm run electron:build
 ```
 
+<<<<<<< HEAD
 ## Credenciais padrão
 
 | Campo | Valor |
 |-------|-------|
 | Utilizador | `MAKINA` |
 | Palavra-passe | `admmakina` |
+=======
+## Acesso
+
+Utilize as credenciais definidas pela administração da empresa.
+>>>>>>> 1d02c64 (feat: sistema empresarial com permissões de dispositivo e UI sem credenciais)
 
 ## Funcionalidades
 

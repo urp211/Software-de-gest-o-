@@ -17,6 +17,7 @@ import {
 } from "../lib/db";
 import { formatDate } from "../lib/format";
 import { useAuth } from "../hooks/useAuth";
+import { getNetworkStatus, notifyLocal } from "../lib/device";
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -38,13 +39,29 @@ export default function DashboardPage() {
     isAdmin: false,
   });
   const [loading, setLoading] = useState(true);
+  const [net, setNet] = useState("…");
 
   useEffect(() => {
     if (!user) return;
     getDashboardStats({ role: user.role, userId: user.id })
-      .then(setStats)
+      .then(async (s) => {
+        setStats(s);
+        if (isAdmin && s.lowStock.length > 0) {
+          const key = `lowstock_notified_${new Date().toDateString()}`;
+          if (!sessionStorage.getItem(key)) {
+            await notifyLocal(
+              "Stock baixo — MAKINA",
+              `${s.lowStock.length} produto(s) abaixo do mínimo.`
+            );
+            sessionStorage.setItem(key, "1");
+          }
+        }
+      })
       .finally(() => setLoading(false));
-  }, [user]);
+    getNetworkStatus().then((n) =>
+      setNet(n.connected ? `Rede: ${n.connectionType}` : "Modo offline")
+    );
+  }, [user, isAdmin]);
 
   return (
     <div>
@@ -53,7 +70,8 @@ export default function DashboardPage() {
         Olá, {user?.name?.split(" ")[0] || "utilizador"}.
         {isAdmin
           ? " Painel completo de administração."
-          : " A ver apenas as suas operações (sem lucros globais)."}
+          : " A ver apenas as suas operações (sem lucros globais)."}{" "}
+        <span className="text-muted">· {net}</span>
       </p>
 
       <div className="fab-row no-print mb-2">
