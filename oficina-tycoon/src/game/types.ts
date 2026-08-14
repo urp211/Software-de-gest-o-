@@ -67,6 +67,14 @@ export interface Job {
   pacienciaMax: number;
   mecanicoId: string | null;
   gorjetaOk: boolean;
+  /** Se true, o carro está avariado e tem de ser guinchado antes de reparar. */
+  precisaReboque: boolean;
+  /** Passa a true depois de o entregares na oficina com o camião. */
+  reboqueFeito: boolean;
+  /** Posição da avaria no mundo 3D. */
+  local?: { x: number; z: number };
+  corCarro: number;
+  tipoCarro: number;
 }
 
 export interface Upgrades {

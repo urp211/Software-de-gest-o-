@@ -1,4 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import Drive from './Drive';
+import type { Missao } from './sim/scene';
 import {
   DURACAO_DIA,
   PARTS,
@@ -10,6 +12,7 @@ import {
 import {
   aceitarJob,
   cafe,
+  concluirReboque,
   capacidadeArmazem,
   comprarPeca,
   comprarUpgrade,
@@ -36,6 +39,39 @@ export default function App() {
   const { state, act, toast, pausado, setPausado, reiniciar } = useGame();
   const [tab, setTab] = useState<Tab>('oficina');
   const [escolher, setEscolher] = useState<Job | null>(null);
+  const [aConduzir, setAConduzir] = useState<string | null>(null); // jobId
+
+
+  const jobReboque = state.fila.find((j) => j.id === aConduzir) ?? null;
+
+  const missao: Missao | null = jobReboque?.local
+    ? {
+        id: jobReboque.id,
+        cliente: jobReboque.cliente,
+        servico: SERVICES[jobReboque.servico].nome,
+        pagamento: jobReboque.pagamento,
+        x: jobReboque.local.x,
+        z: jobReboque.local.z,
+        corCarro: jobReboque.corCarro,
+        tipoCarro: jobReboque.tipoCarro,
+      }
+    : null;
+
+  // Congela a simulação de gestão enquanto conduzes — não perdes clientes
+  // enquanto estás na estrada.
+  useEffect(() => {
+    setPausado(!!aConduzir);
+  }, [aConduzir, setPausado]);
+
+  const onCarregado = useCallback(() => {}, []);
+  const onEntregue = useCallback(
+    (m: Missao) => {
+      act((st) => concluirReboque(st, m.id));
+      setAConduzir(null);
+      setTab('oficina');
+    },
+    [act],
+  );
 
   const s = state;
   const livres = s.mecanicos.filter((m) => !m.jobId);
@@ -45,13 +81,29 @@ export default function App() {
     baiasLivres > 0 &&
     s.fila.some((j) => pecasEmFalta(s, j.servico).length === 0);
 
+  if (aConduzir) {
+    return (
+      <Drive
+        missao={missao}
+        onCarregado={onCarregado}
+        onEntregue={onEntregue}
+        onSair={() => setAConduzir(null)}
+      />
+    );
+  }
+
   return (
     <div className="app">
       <Hud s={s} pausado={pausado} onPausa={() => setPausado((p) => !p)} />
 
       <div className="screen" key={tab}>
         {tab === 'oficina' && (
-          <Oficina s={s} act={act} onEscolher={setEscolher} />
+          <Oficina
+            s={s}
+            act={act}
+            onEscolher={setEscolher}
+            onConduzir={setAConduzir}
+          />
         )}
         {tab === 'equipa' && <Equipa s={s} act={act} />}
         {tab === 'loja' && <Loja s={s} act={act} />}
@@ -159,14 +211,23 @@ function Hud({ s, pausado, onPausa }: { s: GameState; pausado: boolean; onPausa:
 }
 
 function Oficina({
-  s, act, onEscolher,
+  s, act, onEscolher, onConduzir,
 }: {
   s: GameState;
   act: (f: (st: GameState) => string | null | void) => void;
   onEscolher: (j: Job) => void;
+  onConduzir: (jobId: string) => void;
 }) {
   return (
     <>
+      <button
+        className="btn primary"
+        style={{ marginBottom: 12, padding: 13, fontSize: 14 }}
+        onClick={() => onConduzir('livre')}
+      >
+        🚛 Conduzir o reboque (passeio livre)
+      </button>
+
       <h2>Em reparação ({s.ativos.length}/{s.upgrades.baias})</h2>
       {s.ativos.length === 0 && (
         <div className="empty">
@@ -217,7 +278,10 @@ function Oficina({
         const semBaia = s.ativos.length >= s.upgrades.baias;
         const semMec = s.mecanicos.every((m) => m.jobId);
         return (
-          <div className="card" key={j.id}>
+          <div
+            className={`card ${j.precisaReboque && !j.reboqueFeito ? 'mis-card' : ''}`}
+            key={j.id}
+          >
             <div className="job-top">
               <span className="job-veic">{j.veiculo.icone}</span>
               <div className="job-info">
@@ -235,6 +299,14 @@ function Oficina({
             </div>
 
             <div className="tags">
+              {j.precisaReboque && (
+                <span className="tag" style={{
+                  color: j.reboqueFeito ? 'var(--ok)' : 'var(--acc)',
+                  borderColor: j.reboqueFeito ? '#1f4a35' : '#4a3a12',
+                }}>
+                  {j.reboqueFeito ? '🪝 Já na oficina' : '🚛 Avariado na estrada'}
+                </span>
+              )}
               {Object.entries(svc.pecas).length === 0 && (
                 <span className="tag ok">Sem peças necessárias</span>
               )}
@@ -253,6 +325,21 @@ function Oficina({
               <i style={{ width: `${Math.max(0, pac)}%`, background: cor }} />
             </div>
 
+            {j.precisaReboque && !j.reboqueFeito && (
+              <div className="row-btns">
+                <button className="btn primary" onClick={() => onConduzir(j.id)}>
+                  🚛 Ir buscar com o reboque (+45%)
+                </button>
+                <button
+                  className="btn ghost"
+                  onClick={() => act((st) => recusarJob(st, j.id))}
+                >
+                  Recusar
+                </button>
+              </div>
+            )}
+
+            {(!j.precisaReboque || j.reboqueFeito) && (
             <div className="row-btns">
               <button
                 className="btn primary"
@@ -271,6 +358,7 @@ function Oficina({
                 Recusar
               </button>
             </div>
+            )}
           </div>
         );
       })}

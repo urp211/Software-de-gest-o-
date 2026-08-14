@@ -1,44 +1,81 @@
-# Como gerar o APK do Oficina Tycoon
+# 📥 Como obter o APK do Oficina Tycoon 3D
 
-O ambiente onde o jogo foi desenvolvido não tem acesso de rede aos
-repositórios do Google/Maven nem ao Android SDK, por isso o APK compila-se no
-**GitHub Actions**. O workflow já está pronto neste repositório — só falta um
-passo manual, porque a app que fez o commit não tem permissão para escrever
-dentro de `.github/workflows/`.
+O ambiente onde o jogo foi desenvolvido **não tem acesso de rede** ao Android
+SDK nem ao Maven/Google, por isso o APK não pode ser compilado aqui. O build
+está preparado para correr no **GitHub Actions**, que compila e publica o APK
+com um **link de download direto**.
 
-## Opção A — GitHub Actions (recomendado, 2 minutos, sem instalar nada)
+Falta **um passo manual** (30 segundos), porque a app que fez os commits não
+tem permissão para escrever dentro de `.github/workflows/`.
 
-1. No GitHub, abre este repositório no branch
-   `arena/019fff48-software-de-gest-o`.
-2. Copia o ficheiro `oficina-tycoon/ci/build-apk.yml` para
-   `.github/workflows/build-apk.yml`.
+---
 
-   Pela interface web: **Add file → Create new file**, escreve o caminho
-   `.github/workflows/build-apk.yml` e cola o conteúdo de
-   `oficina-tycoon/ci/build-apk.yml`. Commit no mesmo branch.
+## Passo único: ativar o workflow
 
-   Ou por linha de comandos, no teu computador:
+### Pela interface do GitHub (mais fácil)
 
-   ```bash
-   git clone https://github.com/urp211/Software-de-gest-o-.git
-   cd Software-de-gest-o-
-   git checkout arena/019fff48-software-de-gest-o
-   mkdir -p .github/workflows
-   cp oficina-tycoon/ci/build-apk.yml .github/workflows/build-apk.yml
-   git add .github/workflows/build-apk.yml
-   git commit -m "ci: workflow para gerar APK"
-   git push
+1. Abre o repositório no branch `arena/019fff48-software-de-gest-o`.
+2. **Add file → Create new file**.
+3. No nome do ficheiro escreve exatamente:
    ```
+   .github/workflows/build-apk.yml
+   ```
+4. Cola o conteúdo do ficheiro [`oficina-tycoon/ci/build-apk.yml`](./build-apk.yml).
+5. **Commit** (para o mesmo branch).
 
-3. O build arranca sozinho. Vai a **Actions → Build APK**, espera ~4 min.
-4. No fim da execução, secção **Artifacts**, descarrega
-   **`oficina-tycoon-apk`** → contém `oficina-tycoon-debug.apk`.
-5. Passa o ficheiro para o telemóvel Android, permite "instalar de fontes
-   desconhecidas" e instala.
+### Ou por linha de comandos
 
-## Opção B — compilar no teu computador
+```bash
+git clone https://github.com/urp211/Software-de-gest-o-.git
+cd Software-de-gest-o-
+git checkout arena/019fff48-software-de-gest-o
+mkdir -p .github/workflows
+cp oficina-tycoon/ci/build-apk.yml .github/workflows/build-apk.yml
+git add .github/workflows/build-apk.yml
+git commit -m "ci: build do APK"
+git push
+```
 
-Precisas de **JDK 17+** e do **Android SDK** (basta o Android Studio instalado).
+---
+
+## O que acontece a seguir
+
+O build arranca sozinho (~4–6 min) e produz o APK em **dois sítios**:
+
+### 1. Link direto e permanente (Releases) ⭐
+
+Assim que o build terminar, o APK fica disponível neste endereço fixo — é o
+link que podes abrir diretamente no telemóvel:
+
+```
+https://github.com/urp211/Software-de-gest-o-/releases/download/apk-latest/oficina-tycoon.apk
+```
+
+Também aparece em **Releases → Oficina Tycoon 3D — APK**.
+
+> Nota: o link só funciona **depois** da primeira execução do workflow
+> terminar com sucesso. Se der 404, o build ainda não correu.
+
+### 2. Artefacto da execução
+
+**Actions → Build APK →** (última execução) **→ Artifacts →
+`oficina-tycoon-apk`**. Vem dentro de um `.zip`.
+
+---
+
+## Instalar no telemóvel
+
+1. Abre o link do APK no browser do Android e transfere.
+2. O Android vai pedir para permitir **"instalar de fontes desconhecidas"**
+   para o browser — aceita.
+3. Abre o ficheiro transferido e instala.
+4. O jogo abre em **ecrã cheio, na horizontal**.
+
+---
+
+## Alternativa: compilar no teu computador
+
+Precisas de **JDK 17+** e do **Android SDK** (basta ter o Android Studio).
 
 ```bash
 cd oficina-tycoon
@@ -49,15 +86,15 @@ cd android
 ./gradlew assembleDebug
 ```
 
-APK gerado em:
-`oficina-tycoon/android/app/build/outputs/apk/debug/app-debug.apk`
+APK em `oficina-tycoon/android/app/build/outputs/apk/debug/app-debug.apk`.
 
 Ou abre a pasta `oficina-tycoon/android` no Android Studio e carrega em ▶ Run
-para instalar direto num telemóvel ligado por USB.
+com o telemóvel ligado por USB.
 
-## Nota sobre assinatura
+---
 
-O APK produzido é **debug** — assinado com a chave de debug do Android. Serve
-perfeitamente para instalar e jogar. Para publicar na Google Play é preciso
-criar um keystore de release e trocar `assembleDebug` por `assembleRelease`
-com a configuração de assinatura.
+## Sobre a assinatura
+
+O APK é **debug** (assinado com a chave de debug do Android) — instala e joga
+sem problemas. Para publicar na Google Play seria preciso criar um keystore de
+release e usar `assembleRelease`.

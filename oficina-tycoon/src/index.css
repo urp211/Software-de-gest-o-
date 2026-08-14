@@ -224,3 +224,151 @@ button { font-family: inherit; cursor: pointer; border: none; }
   display: grid; place-items: center; text-align: center; padding: 24px;
 }
 .pausa-veu h2 { font-size: 22px; color: var(--txt); letter-spacing: 0; text-transform: none; }
+
+/* ==================== MODO CONDUÇÃO 3D ==================== */
+.drive {
+  position: fixed; inset: 0; background: #000;
+  overflow: hidden; touch-action: none;
+}
+.drive .cv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+
+.d-top {
+  position: absolute; top: 0; left: 0; right: 0;
+  display: flex; align-items: center; gap: 8px;
+  padding: calc(8px + var(--safe-top)) 10px 8px;
+  background: linear-gradient(180deg, rgba(6,10,18,.85), transparent);
+  z-index: 5;
+}
+.d-chip {
+  background: rgba(20,27,40,.85); color: var(--txt);
+  border: 1px solid rgba(255,255,255,.14); border-radius: 10px;
+  padding: 8px 11px; font-size: 12.5px; font-weight: 600; backdrop-filter: blur(6px);
+}
+.d-missao {
+  flex: 1; min-width: 0; text-align: center;
+  background: rgba(20,27,40,.8); border: 1px solid rgba(255,255,255,.12);
+  border-radius: 11px; padding: 6px 10px; backdrop-filter: blur(6px);
+}
+.d-missao b { display: block; font-size: 12.5px; }
+.d-missao span {
+  display: block; font-size: 10.5px; color: var(--dim);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.d-nav {
+  position: absolute; top: calc(64px + var(--safe-top)); left: 10px;
+  background: rgba(10,16,26,.82); border: 1px solid rgba(255,255,255,.14);
+  border-radius: 14px; padding: 8px 6px; text-align: center; width: 62px;
+  backdrop-filter: blur(6px); z-index: 5;
+}
+.d-seta { font-size: 26px; line-height: 1; color: var(--acc); transition: transform .12s linear; }
+.d-nav b { display: block; font-size: 11.5px; margin-top: 2px; }
+
+.d-cams {
+  position: absolute; top: calc(64px + var(--safe-top)); right: 10px;
+  display: flex; flex-direction: column; gap: 5px; z-index: 5;
+}
+.d-cam {
+  width: 40px; height: 40px; font-size: 17px; border-radius: 11px;
+  background: rgba(20,27,40,.82); color: var(--txt);
+  border: 1px solid rgba(255,255,255,.13); backdrop-filter: blur(6px);
+}
+.d-cam.on { background: linear-gradient(135deg, var(--acc), var(--acc2)); color: #201406; border-color: transparent; }
+
+.d-aviso {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+  background: rgba(40,20,20,.94); color: #ffd9d9; border: 1px solid #6b3030;
+  padding: 11px 18px; border-radius: 12px; font-size: 13px; z-index: 8;
+  text-align: center; max-width: 78%;
+}
+
+.d-painel {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  bottom: calc(150px + var(--safe-bot));
+  display: flex; align-items: center; gap: 12px;
+  background: rgba(10,16,26,.78); border: 1px solid rgba(255,255,255,.12);
+  border-radius: 14px; padding: 7px 14px; backdrop-filter: blur(8px); z-index: 5;
+}
+.d-vel { text-align: center; line-height: 1; }
+.d-vel b { font-size: 27px; color: var(--acc); font-variant-numeric: tabular-nums; }
+.d-vel span { display: block; font-size: 9px; color: var(--dim); letter-spacing: .5px; }
+.d-rpm { width: 118px; }
+.d-rpm-bar { height: 6px; background: #0a0f18; border-radius: 4px; overflow: hidden; }
+.d-rpm-bar > i { display: block; height: 100%; transition: width .1s linear; }
+.d-rpm span { display: block; font-size: 10px; color: var(--dim); margin-top: 3px; text-align: center; }
+
+.d-ctl {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 6;
+  display: flex; align-items: flex-end; justify-content: space-between;
+  padding: 0 14px calc(14px + var(--safe-bot));
+  pointer-events: none;
+}
+.d-ctl > * { pointer-events: auto; }
+
+.d-volante {
+  width: 132px; height: 132px; position: relative;
+  display: grid; place-items: center; touch-action: none;
+}
+.d-volante small {
+  position: absolute; bottom: -2px; font-size: 9px; color: rgba(255,255,255,.45);
+}
+.d-vol-img { width: 118px; height: 118px; position: relative; transition: transform .05s linear; }
+.d-vol-aro {
+  position: absolute; inset: 0; border-radius: 50%;
+  border: 13px solid rgba(28,35,50,.9);
+  box-shadow: 0 0 0 2px rgba(255,176,32,.45), inset 0 0 0 2px rgba(255,176,32,.28);
+}
+.d-vol-h, .d-vol-v { position: absolute; background: rgba(28,35,50,.9); }
+.d-vol-h { left: 8%; right: 8%; top: 47%; height: 8px; border-radius: 4px; }
+.d-vol-v { top: 50%; bottom: 8%; left: 46.5%; width: 8px; border-radius: 4px; }
+.d-vol-c {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%);
+  width: 34px; height: 34px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--acc), var(--acc2));
+}
+
+.d-pedais { display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
+.d-acao {
+  padding: 11px 16px; border-radius: 13px; font-size: 13.5px; font-weight: 700;
+  background: rgba(24,31,45,.85); color: rgba(255,255,255,.35);
+  border: 1px solid rgba(255,255,255,.12); backdrop-filter: blur(6px);
+}
+.d-acao.on {
+  background: linear-gradient(135deg, var(--ok), #23a565); color: #042413;
+  border-color: transparent; animation: pulsa 1.3s ease-in-out infinite;
+}
+@keyframes pulsa { 50% { transform: scale(1.045); } }
+
+.d-p-row { display: flex; gap: 9px; align-items: center; }
+.d-re {
+  width: 48px; height: 48px; border-radius: 13px; font-size: 17px; font-weight: 800;
+  background: rgba(24,31,45,.85); color: var(--txt);
+  border: 1px solid rgba(255,255,255,.13); backdrop-filter: blur(6px);
+}
+.d-re.on { background: linear-gradient(135deg, #ff6b6b, #d93a3a); color: #fff; border-color: transparent; }
+.d-pedal {
+  width: 74px; height: 74px; border-radius: 50%; font-size: 26px;
+  border: 2px solid rgba(255,255,255,.16); backdrop-filter: blur(6px);
+  display: grid; place-items: center;
+}
+.d-pedal.gas { background: rgba(30,72,42,.85); }
+.d-pedal.travao { background: rgba(80,28,28,.85); width: 62px; height: 62px; font-size: 22px; }
+.d-pedal:active { transform: scale(.93); filter: brightness(1.4); }
+
+/* Cartão de missão na oficina */
+.mis-card { border-color: #4a3a12; background: linear-gradient(160deg, #2a2110, var(--card)); }
+
+/* ---- Landscape: gestão em 2 colunas, controlos de condução mais baixos ---- */
+@media (orientation: landscape) and (max-height: 560px) {
+  .app { max-width: 100%; }
+  .screen { padding: 10px 14px 14px; }
+  .hud-stats .stat b { font-size: 13px; }
+  .nav button { padding: 5px 2px 6px; font-size: 9.5px; }
+  .nav button .ic { font-size: 16px; }
+  .d-painel { bottom: calc(104px + var(--safe-bot)); }
+  .d-volante { width: 112px; height: 112px; }
+  .d-vol-img { width: 100px; height: 100px; }
+  .d-pedal { width: 64px; height: 64px; font-size: 22px; }
+  .d-pedal.travao { width: 54px; height: 54px; font-size: 19px; }
+  .d-cams { flex-direction: row; flex-wrap: wrap; width: 132px; justify-content: flex-end; }
+}

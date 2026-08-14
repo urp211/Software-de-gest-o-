@@ -21,6 +21,25 @@ import type {
 } from './types';
 
 export const uid = () => Math.random().toString(36).slice(2, 10);
+
+/** Paleta dos carros (espelha sim/models CORES_CARRO, sem depender do three). */
+const CORES_CARRO = [
+  0xd94f4f, 0x4f7fd9, 0x54b06a, 0xe0c14a, 0xb0b6c0,
+  0x8e5bd0, 0xe08a3c, 0x2f3742, 0xd9d9e0, 0x3aa8a0,
+];
+
+/** Eixos da grelha de estradas (espelha sim/world EIXOS). */
+const EIXOS_RUA = [-160, -80, 0, 80, 160];
+
+/** Ponto aleatório sobre uma faixa de rodagem do mundo 3D. */
+function localAvaria() {
+  const eixo = EIXOS_RUA[Math.floor(Math.random() * EIXOS_RUA.length)];
+  const along = (Math.random() - 0.5) * 2 * 170;
+  const faixa = (Math.random() < 0.5 ? -1 : 1) * 3.5;
+  return Math.random() < 0.5
+    ? { x: eixo + faixa, z: along }
+    : { x: along, z: eixo + faixa };
+}
 const pick = <T,>(a: T[]) => a[Math.floor(Math.random() * a.length)];
 const rnd = (min: number, max: number) => min + Math.random() * (max - min);
 
@@ -115,12 +134,21 @@ export function gerarJob(s: GameState): Job {
       : Math.floor(rnd(0, Math.max(1, ordenados.length / 2)));
   const servico = ordenados[Math.min(idx, ordenados.length - 1)];
   const veiculo = sorteiaVeiculo();
+  // Serviços pesados chegam mais vezes como avaria na estrada
+  const precisaReboque = Math.random() < 0.22 + servico.dificuldade * 0.09;
   const bonusRep = 1 + (s.reputacao - 50) / 160;
   const pagamento = Math.round(
-    servico.pagamentoBase * veiculo.multiplicador * bonusRep * rnd(0.9, 1.15),
+    servico.pagamentoBase *
+      veiculo.multiplicador *
+      bonusRep *
+      rnd(0.9, 1.15) *
+      (precisaReboque ? 1.45 : 1),
   );
+  // Reboque paga um extra e o cliente espera mais (está à espera do camião)
   const pacienciaMax = Math.round(
-    (38 + servico.dificuldade * 6) * (1 + (s.upgrades.lounge - 1) * 0.18),
+    (38 + servico.dificuldade * 6) *
+      (1 + (s.upgrades.lounge - 1) * 0.18) *
+      (precisaReboque ? 2.4 : 1),
   );
   return {
     id: uid(),
@@ -134,6 +162,11 @@ export function gerarJob(s: GameState): Job {
     pacienciaMax,
     mecanicoId: null,
     gorjetaOk: true,
+    precisaReboque,
+    reboqueFeito: false,
+    local: precisaReboque ? localAvaria() : undefined,
+    corCarro: CORES_CARRO[Math.floor(Math.random() * CORES_CARRO.length)],
+    tipoCarro: Math.floor(Math.random() * 3),
   };
 }
 
@@ -273,6 +306,8 @@ export function aceitarJob(s: GameState, jobId: string, mecId: string): string |
   const mec = s.mecanicos.find((m) => m.id === mecId);
   if (!mec) return 'Mecânico inválido.';
   if (mec.jobId) return `${mec.nome} já está ocupado.`;
+  if (job.precisaReboque && !job.reboqueFeito)
+    return 'Este carro está avariado na estrada — vai buscá-lo com o reboque.';
   if (s.ativos.length >= s.upgrades.baias) return 'Não há baias livres.';
   const falta = pecasEmFalta(s, job.servico);
   if (falta.length)
@@ -360,5 +395,22 @@ export function cafe(s: GameState, id: string): string | null {
   s.dinheiro -= 50;
   s.stats.gastos += 50;
   m.energia = Math.min(100, m.energia + 45);
+  return null;
+}
+
+
+/** Marca o reboque como concluído (chamado ao entregar o carro na oficina). */
+export function concluirReboque(s: GameState, jobId: string): string | null {
+  const job = s.fila.find((j) => j.id === jobId);
+  if (!job) return 'Esse trabalho já não existe.';
+  job.reboqueFeito = true;
+  // o cliente ganha paciência: o carro já está na oficina
+  job.paciencia = job.pacienciaMax;
+  const bonus = Math.round(job.pagamento * 0.18);
+  s.dinheiro += bonus;
+  s.stats.faturacao += bonus;
+  s.reputacao = Math.min(100, s.reputacao + 2);
+  ganharXP(s, 40);
+  addLog(s, `🪝 Guinchaste o carro de ${job.cliente}. +${bonus} Kz de reboque.`, 'ok');
   return null;
 }
