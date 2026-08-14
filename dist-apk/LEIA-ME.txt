@@ -1,56 +1,17 @@
-<<<<<<< HEAD
-MAKINA Pro — App Mobile Offline (Android APK)
-=============================================
-=======
 MAKINA — Sistema de Gestão Empresarial (Android APK)
 ====================================================
->>>>>>> 1d02c64 (feat: sistema empresarial com permissões de dispositivo e UI sem credenciais)
 
 Ficheiro: MAKINA-Gestao-1.0.0.apk  |  MAKINA.apk
-Package: com.makina.gestao
+Package: com.makina.gestao · versão 1.1.0
 Android 5.0+ (API 21–34)
 
-<<<<<<< HEAD
-LOGIN
------
-Admin: MAKINA / admmakina
-
-PERMISSÕES
-----------
-OPERADOR
-  - Vende no POS (não adiciona stock)
-  - Vê só as SUAS vendas e receita (sem lucros da empresa)
-  - 2ª via de fatura só com autorização do admin (salvo config)
-
-ADMIN
-  - Stock com fotos, custos e alertas
-  - Lucros, despesas, contabilidade avançada
-  - Anular faturas, aprovar 2ª via, backup/restore
-  - Auditoria e operadores
-
-FATURAÇÃO
----------
-  - Pré-visualização térmica 58/80mm
-  - Valor entregue + troco automático
-  - QR Code de validação em cada fatura
-  - Extrato A4 imprimível
-  - 2ª via controlada
-
-OUTRAS FUNÇÕES PRO
-------------------
-Clientes, caixa/turno, despesas, backup JSON,
-contabilidade (margem, CMV, top produtos, por operador),
-movimentos de stock, auditoria.
-
-Instalação: permitir «Fontes desconhecidas» e abrir o APK.
-=======
 INSTALAÇÃO
 ----------
 1. Copie o APK para o telemóvel
 2. Ative «Instalar apps desconhecidas»
 3. Abra o APK → Instalar → Abrir
-4. Na primeira sessão, autorize as permissões pedidas
-   (câmara, galeria, notificações, armazenamento)
+4. Entre com as credenciais da sua organização
+5. Autorize as permissões pedidas na primeira sessão
 
 PERMISSÕES DO DISPOSITIVO
 -------------------------
@@ -59,23 +20,4 @@ PERMISSÕES DO DISPOSITIVO
 - Armazenamento — backups e exportações
 - Rede — deteção online/offline (app funciona offline)
 
-PERFIS
-------
-OPERADOR
-  - POS e vendas próprias
-  - Sem acesso a lucros globais nem adição de stock
-  - 2ª via de fatura com autorização do admin
-
-ADMINISTRADOR
-  - Stock com fotos e custos
-  - Contabilidade, despesas, anulação de faturas
-  - Backup/restauro, operadores, auditoria
-
-FATURAÇÃO
----------
-Pré-visualização térmica 58/80mm · QR · troco automático
-Extrato A4 · 2ª via controlada · clientes com NIF
-
-Use as credenciais definidas pela sua organização.
 Os dados ficam apenas neste dispositivo (offline).
->>>>>>> 1d02c64 (feat: sistema empresarial com permissões de dispositivo e UI sem credenciais)

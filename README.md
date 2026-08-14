@@ -1,20 +1,17 @@
-# MAKINA — Software de Gestão Avançada
+# MAKINA — Sistema de Gestão Empresarial
 
 Gestão de oficina / peças auto (Angola · padrão AGT), **offline**.
 
-## 📱 App Mobile (APK) — recomendado
+## App Mobile (APK)
 
 ```
 dist-apk/MAKINA-Gestao-1.0.0.apk
 ```
 
-- **100% offline** no telemóvel / tablet / foldable  
+- Offline no telemóvel / tablet / foldable  
 - UI adaptável a qualquer ecrã  
-<<<<<<< HEAD
-- Login: `MAKINA` / `admmakina`  
-=======
+- Pedido de permissões do dispositivo (câmara, ficheiros, notificações)  
 - Acesso com as credenciais da sua organização  
->>>>>>> 1d02c64 (feat: sistema empresarial com permissões de dispositivo e UI sem credenciais)
 
 Instruções: `dist-apk/LEIA-ME.txt` e `mobile/README.md`.
 
@@ -31,43 +28,23 @@ cd mobile && npm install && npm run dev
 cd mobile && npm run apk
 ```
 
-## 💻 Desktop (Windows)
+## Desktop (Windows)
 
 ```
 dist-exe/MAKINA-Gestao-1.0.0-Portable.zip
 ```
 
-1. Extraia o ZIP  
-2. Instale Node.js 22+ se necessário  
-3. Execute `Iniciar-MAKINA.bat`  
-
-Para `.exe` nativo (Electron) num PC Windows:
-
-```bash
-npm install
-npm run electron:build
-```
-
-<<<<<<< HEAD
-## Credenciais padrão
-
-| Campo | Valor |
-|-------|-------|
-| Utilizador | `MAKINA` |
-| Palavra-passe | `admmakina` |
-=======
 ## Acesso
 
 Utilize as credenciais definidas pela administração da empresa.
->>>>>>> 1d02c64 (feat: sistema empresarial com permissões de dispositivo e UI sem credenciais)
 
 ## Funcionalidades
 
-- Login Admin / Operador  
-- Dashboard (stock, receita, lucro)  
-- Estoque de peças com código `MAK-…`  
-- POS / faturação `MAK-INV-…`  
-- Operadores, calculadora, relatórios, configurações  
+- Login Admin / Operador (sem exposição de credenciais na UI)
+- Dashboard, stock com fotos, POS com troco e QR
+- Fatura térmica + extrato A4 + 2ª via autorizada
+- Contabilidade avançada, caixa, despesas, clientes
+- Backup/restauro, auditoria, permissões nativas Android
 
 ## Estrutura
 

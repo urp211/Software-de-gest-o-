@@ -1,21 +1,13 @@
 {
   "name": "MAKINA",
   "packageId": "com.makina.gestao",
-<<<<<<< HEAD
-  "version": "1.0.0",
-  "versionCode": 1,
-=======
   "version": "1.1.0",
   "versionCode": 11,
->>>>>>> 1d02c64 (feat: sistema empresarial com permissões de dispositivo e UI sem credenciais)
   "entry": "dist/index.html",
   "orientation": "auto",
   "statusBar": true,
   "permissions": [
     "INTERNET",
-<<<<<<< HEAD
-    "ACCESS_NETWORK_STATE"
-=======
     "ACCESS_NETWORK_STATE",
     "ACCESS_WIFI_STATE",
     "CAMERA",
@@ -26,7 +18,6 @@
     "VIBRATE",
     "RECEIVE_BOOT_COMPLETED",
     "WAKE_LOCK"
->>>>>>> 1d02c64 (feat: sistema empresarial com permissões de dispositivo e UI sem credenciais)
   ],
   "icon": "./public/icons/icon-512.png",
   "network": {

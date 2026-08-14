@@ -1,48 +1,43 @@
-# MAKINA Mobile — Offline para todos os dispositivos
+# MAKINA Mobile — Gestão empresarial offline
 
 App Android instalável (APK) + PWA responsiva. **100% offline** após a instalação.
 
-## APK pronto
+## APK
 
 ```
 ../dist-apk/MAKINA-Gestao-1.0.0.apk
-../dist-apk/MAKINA.apk
 ```
 
 | Campo | Valor |
 |-------|--------|
 | Package | `com.makina.gestao` |
+| Versão | 1.1.0 |
 | minSdk | 21 (Android 5.0+) |
-| targetSdk | 34 |
-<<<<<<< HEAD
-| Login | `MAKINA` / `admmakina` |
-=======
 | Acesso | Credenciais da organização |
->>>>>>> 1d02c64 (feat: sistema empresarial com permissões de dispositivo e UI sem credenciais)
 
-### Instalar no telemóvel
+### Instalar
 
-1. Transfira o `.apk` para o dispositivo  
-2. Ative *Fontes desconhecidas* / *Instalar apps desconhecidas*  
-3. Abra o APK → **Instalar** → Abrir  
+1. Transfira o `.apk`  
+2. Ative *Fontes desconhecidas*  
+3. Instale e abra  
+4. Autorize as permissões pedidas (câmara, galeria, notificações, armazenamento)
 
-## O que funciona offline
+## Permissões do dispositivo
 
-- Login Admin / Operador  
-- Dashboard (stock, receita, lucro)  
-- Estoque de peças + códigos `MAK-…`  
-- POS / faturação `MAK-INV-…`  
-- Operadores, relatórios, calculadora, configurações  
-- Dados no **IndexedDB** do dispositivo (persistentes)  
+| Permissão | Uso |
+|-----------|-----|
+| Câmara | Fotos de produtos |
+| Galeria | Selecionar imagens |
+| Notificações | Alertas de stock / caixa |
+| Armazenamento | Backups e exportações |
+| Rede | Estado online/offline |
 
-## UI adaptativa
+Pode voltar a pedir em **Configurações → Dispositivo & permissões**.
 
-| Dispositivo | Layout |
-|-------------|--------|
-| Telemóvel | Barra inferior + menu «Mais» |
-| Tablet / landscape | Menu lateral |
-| Foldable / desktop | Layout largo responsivo |
-| Safe areas | Notch / gesture bar respeitados |
+## Perfis
+
+- **Operador** — POS e vendas próprias; sem lucros globais nem adição de stock  
+- **Admin** — stock, contabilidade, anulações, 2ª via, backup, operadores  
 
 ## Desenvolvimento
 
@@ -50,25 +45,10 @@ App Android instalável (APK) + PWA responsiva. **100% offline** após a instala
 cd mobile
 npm install
 npm run dev          # http://0.0.0.0:5173
-npm run build        # gera dist/
-npm run apk          # gera APK em ../dist-apk/
-```
-
-### Capacitor (Android Studio)
-
-```bash
-npm run cap:sync
-npm run cap:open
+npm run build
+npm run apk          # gera ../dist-apk/
 ```
 
 ## Stack
 
-- React 19 + Vite 6 + TypeScript  
-- Dexie (IndexedDB) + bcryptjs  
-- Vite PWA (service worker)  
-- Capacitor 7 (projeto nativo opcional)  
-- Nitron (empacotamento APK WebView)  
-
-## Autor
-
-Makina Company / Raul Lourenço · AGT Angola
+React 19 · Vite 6 · Dexie · Capacitor 7 · Nitron APK · PWA
